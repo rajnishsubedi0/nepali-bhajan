@@ -27,35 +27,46 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      # ---------- Decode keystore ----------
       - name: Decode keystore
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
         run: |
-          echo "$SIGNING_KEY" | base64 -d > ${{ github.workspace }}/my-upload-key.jks
+          echo -n "$SIGNING_KEY" | base64 -d > ${{ github.workspace }}/my-upload-key.jks
+          echo "=== Decoded keystore ==="
           ls -la ${{ github.workspace }}/my-upload-key.jks
+          file ${{ github.workspace }}/my-upload-key.jks
+          sha256sum ${{ github.workspace }}/my-upload-key.jks
 
-              - name: Test keystore passwords
+      # ---------- Debug: verify keystore + passwords ----------
+      - name: Debug keystore
         env:
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          echo "Testing store password..."
-          keytool -list -keystore ${{ github.workspace }}/my-upload-key.jks \
-            -storepass "$STORE_PASSWORD" \
-            && echo "✅ Store password OK" \
-            || echo "❌ Store password WRONG"
-          
-          echo "Testing key alias + password..."
-          keytool -list -keystore ${{ github.workspace }}/my-upload-key.jks \
-            -storepass "$STORE_PASSWORD" \
-            -alias "$KEY_ALIAS" \
-            && echo "✅ Alias OK" \
-            || echo "❌ Alias wrong"
+          JKS="${{ github.workspace }}/my-upload-key.jks"
+          echo "=== Secret lengths (chars) ==="
+          echo "STORE_PASSWORD length: ${#STORE_PASSWORD}"
+          echo "KEY_PASSWORD length:   ${#KEY_PASSWORD}"
+          echo "KEY_ALIAS:             [$KEY_ALIAS]"
+
+          echo ""
+          echo "=== Test 1: list keystore with STORE_PASSWORD ==="
+          keytool -list -keystore "$JKS" -storepass "$STORE_PASSWORD" 2>&1 | head -20 || true
+
+          echo ""
+          echo "=== Test 2: list keystore with STORE_PASSWORD + alias ==="
+          keytool -list -keystore "$JKS" -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" 2>&1 | head -20 || true
+
+          echo ""
+          echo "=== Test 3: read private key with KEY_PASSWORD ==="
+          keytool -list -keystore "$JKS" -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" -keypass "$KEY_PASSWORD" 2>&1 | head -20 || true
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      # ---------- Build release APK ----------
       - name: Build release APK
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/my-upload-key.jks
@@ -64,6 +75,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew assembleRelease --stacktrace
 
+      # ---------- Collect APK ----------
       - name: Collect APK
         run: |
           mkdir -p artifacts
@@ -77,6 +89,7 @@ jobs:
           path: artifacts/*.apk
           retention-days: 30
 
+      # ---------- Publish Release ----------
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
