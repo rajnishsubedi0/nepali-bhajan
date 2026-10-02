@@ -18,15 +18,8 @@ import android.widget.Toast;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import android.graphics.drawable.ColorDrawable;
 import android.os.Handler;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
 import android.widget.AdapterView;
-import android.widget.SearchView;
-
 import com.rkant.bhajanapp.Favourites.FavouriteBookmarked;
 import com.rkant.bhajanapp.FirstActivities.RecyclerAdapter;
 import com.rkant.bhajanapp.secondActivities.DataHolder;
@@ -40,9 +33,6 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
-    String url_version_code,url_app_link;
-    public static int versionCodeOfApp;
-
     androidx.drawerlayout.widget.DrawerLayout drawerLayout;
 
     RecyclerView recyclerView;
@@ -169,9 +159,7 @@ public class MainActivity extends AppCompatActivity {
         btnSearchHeader.setOnClickListener(new android.view.View.OnClickListener() {
             @Override
             public void onClick(android.view.View view) {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
-                    android.transition.TransitionManager.beginDelayedTransition((android.view.ViewGroup) findViewById(R.id.app_bar_container));
-                }
+
                 headerNormalLayout.setVisibility(android.view.View.GONE);
                 headerSearchLayout.setVisibility(android.view.View.VISIBLE);
                 
@@ -279,9 +267,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void collapseSearch() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
-            android.transition.TransitionManager.beginDelayedTransition((android.view.ViewGroup) findViewById(R.id.app_bar_container));
-        }
+
         etSearchInput.setText("");
         etSearchInput.clearFocus();
         headerSearchLayout.setVisibility(android.view.View.GONE);
