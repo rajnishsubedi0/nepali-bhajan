@@ -1,0 +1,69 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- Outer Rim (Main circular track) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:pathData="M12,2 A10,10 0 1,1 11.99,2 Z" />
+
+    <!-- Inner Rim -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1"
+        android:pathData="M12,6 A6,6 0 1,1 11.99,6 Z" />
+
+    <!-- Center Hub (Solid circle) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,10 A2,2 0 1,1 11.99,10 Z" />
+
+    <!-- 8 Radiating Spokes -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:pathData="M12,10 L12,2 M12,14 L12,22 M10,12 L2,12 M14,12 L22,12 M10.59,10.59 L4.93,4.93 M13.41,10.59 L19.07,4.93 M10.59,13.41 L4.93,19.07 M13.41,13.41 L19.07,19.07" />
+
+    <!-- 8 Sharp Majestic Teeth / Blades pointing outward -->
+    <!-- Top -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,0.5 L10.5,2 L13.5,2 Z" />
+    <!-- Bottom -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,23.5 L13.5,22 L10.5,22 Z" />
+    <!-- Right -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M23.5,12 L22,10.5 L22,13.5 Z" />
+    <!-- Left -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M0.5,12 L2,13.5 L2,10.5 Z" />
+    <!-- Top-Right -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M20.13,3.87 L18.01,4.93 L19.07,5.99 Z" />
+    <!-- Bottom-Right -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M20.13,20.13 L19.07,18.01 L18.01,19.07 Z" />
+    <!-- Top-Left -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M3.87,3.87 L4.93,5.99 L5.99,4.93 Z" />
+    <!-- Bottom-Left -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M3.87,20.13 L5.99,19.07 L4.93,18.01 Z" />
+
+</vector>

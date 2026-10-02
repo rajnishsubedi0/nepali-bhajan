@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="blue_for_text">#FFB0CEFC</color>
+    <color name="white_color_for_background">#FFEFF0F3</color>
+    <color name="purple_for_background">#603DB1</color>
+    <color name="recycler_black">#1F1F1F</color>
+
+    <!-- Semantic Theme Colors -->
+    <color name="shiva_icon_tint">#031634</color>
+    <color name="bg_app">#F4F5F9</color>
+    <color name="bg_list_item">#FFFFFF</color>
+    <color name="text_primary">#0F172A</color>
+    <color name="text_secondary">#64748B</color>
+    <color name="accent_bg">#E8EAF6</color>
+    <color name="accent_icon">#4F46E5</color>
+    <color name="color_destructive">#EF4444</color>
+</resources>  

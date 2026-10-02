@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Beautiful bold modern search icon (Q-style) matching user reference -->
+    <path
+        android:fillColor="@color/text_primary"
+        android:pathData="M11,4 C7.13,4 4,7.13 4,11 C4,14.87 7.13,18 11,18 C12.63,18 14.12,17.44 15.31,16.51 L17.5,18.7 C17.89,19.09 18.52,19.09 18.91,18.7 C19.3,18.31 19.3,17.68 18.91,17.29 L16.71,15.11 C17.52,13.97 18,12.55 18,11 C18,7.13 14.87,4 11,4 Z M11,14.8 C8.9,14.8 7.2,13.1 7.2,11 C7.2,8.9 8.9,7.2 11,7.2 C13.1,7.2 14.8,8.9 14.8,11 C14.8,13.1 13.1,14.8 11,14.8 Z" />
+</vector>
+  

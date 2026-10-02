@@ -1,0 +1,423 @@
+
+[
+  {
+    "bhajan_nepali": "जगिदश्वर जय अभिनाशी",
+    "bhajan_english": "jay gajadishwora jay abhinasi jaya jagadishwora jag dishora disora jyajagadishora jayajaga jayagaja jayjaga abinasi",
+    "id": 0,
+    "bhajan": "others",
+    "bhajan_type": "पुष्पाञ्जली"
+  },
+  {
+    "bhajan_nepali": "गणपति भक्त लगाउ पार",
+    "bhajan_english": "ganapati bhakta lagau par gana pati",
+    "id": 10,
+    "bhajan": "others",
+    "bhajan_type": "अन्य भजन"
+  },
+  {
+    "bhajan_nepali": "ॐ जय जगदिश हरे",
+    "bhajan_english": "om jaya jagadisha aarati arati arti oom jay jai jagdish jagadishahare jagdishhare",
+    "id": 1,
+    "bhajan": "others",
+    "bhajan_type": "आरती"
+  },
+  {
+    "bhajan_nepali": "गोविन्द जय जय, गोपाल जय जय",
+    "bhajan_english": "gobinda jaya jaya gopal jaya jaya govinda jaya jaya",
+    "id": 20,
+    "bhajan": "krishna",
+    "bhajan_type": "अन्य भजन"
+  },
+  {
+    "bhajan_nepali": "नाँचे कृष्णजी छमछम नाँचे कृष्णजी",
+    "bhajan_english": "nachhe krishna jee chham chham nache krishna jee cham cham",
+    "id": 30,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "कृष्ण गए बनैमा",
+    "bhajan_english": "krishna gaye banaima radhika lai samjhi manaima krishna jaye banai ma",
+    "id": 40,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "पाउँ सँधैभरी मंगल गाउन",
+    "bhajan_english": "paau sadhai vari mangala gauna pau sadhai vari sadhaivari sadhai bhari sadhaibhari",
+    "id": 50,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "आउन सखि फुलबारीमा",
+    "bhajan_english": "aauna sakhi phul bari ma aauna sakhi phool bari ma aauna sakhi phul barima",
+    "id": 60,
+    "bhajan": "others",
+    "bhajan_type": "अन्य भजन"
+  },
+  {
+    "bhajan_nepali": "मथुरा खोजेँ गोकुल खोजेँ",
+    "bhajan_english": "mathura khoje gokula khoje",
+    "id": 70,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "खोजुँ म तिमीलाई कहाँ",
+    "bhajan_english": "khoju ma timilai kaha murali bale",
+    "id": 80,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "सुनन सखि प्यारी",
+    "bhajan_english": "sunana sakhi pyari madhuro banshi",
+    "id": 90,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "श्यामले वदन घुम्रिएको बाल",
+    "bhajan_english": "shyama le badana ghumri yeko bal shyam le badana ghumrieako baal",
+    "id": 100,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "वृन्दावन शहर बनेर होकि",
+    "bhajan_english": "brindabana sahara brinda bana sahara banera ho ki hoki",
+    "id": 110,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "तार्दछौ सारा जमाना",
+    "bhajan_english": "तtarda xau sara jamana tarda chhau sara jamana",
+    "id": 120,
+    "bhajan": "others",
+    "bhajan_type": "अन्य भजन"
+  },
+  {
+    "bhajan_nepali": "कृष्ण मुरारी, मधुर मधुर वंशी बज्यो",
+    "bhajan_english": "krishna murari madhur madhur banshi bajyo bansi bajyo kaha xau hari kaha chhau hari",
+    "id": 130,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "आउन कृष्ण दर्शन देउन",
+    "bhajan_english": "aauna krishna darshana deu na",
+    "id": 140,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "मुक्तिनाथ गण्डकी दामोदर कुण्ड",
+    "bhajan_english": "muktinatha gandaki damodarkunda mukti nath gandakai damodar kunda",
+    "id": 150,
+    "bhajan": "hari",
+    "bhajan_type": "हरि भजन"
+  },
+  {
+    "bhajan_nepali": "कैलाशमा बस्ने, खरानी धस्ने",
+    "bhajan_english": "kailash ma basne kharani dhasne ghasne gasne kailas ma basne shiva",
+    "id": 160,
+    "bhajan": "shiva",
+    "bhajan_type": "शिव भजन"
+  },
+  {
+    "bhajan_nepali": "कति राम्रो श्री वृन्दावन",
+    "bhajan_english": "ramro shree brindabana brinda bana vrinda bana",
+    "id": 170,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "ॐ नमो भगवते वासुदेवाय",
+    "bhajan_english": "om namo bhagwate basudewaya basudeb omnamo",
+    "id": 180,
+    "bhajan": "others",
+    "bhajan_type": "अन्य भजन"
+  },
+  {
+    "bhajan_nepali": "कृष्ण पियारा, प्रभु बिना त हाम्रो को छर",
+    "bhajan_english": "krishna piyara timi bina ta hamro ko xa ra",
+    "id": 190,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "कोहि पागल धनले, कोहि पागल मनले",
+    "bhajan_english": "kohi paagal dhana le koi pagal dhana le koi pagaal dhana le kohi pagal dhana le",
+    "id": 200,
+    "bhajan": "others",
+    "bhajan_type": "अन्य भजन"
+  },
+  {
+    "bhajan_nepali": "आए म माता तिम्रो चरणमा",
+    "bhajan_english": "aaye ma mata timro charan ma aye ma mata",
+    "id": 210,
+    "bhajan": "others",
+    "bhajan_type": "देवी भजन"
+  },
+  {
+    "bhajan_nepali": "यो बाटो कहाँ जाने होला",
+    "bhajan_english": "yo bato kaha jane hola yo baato kaha",
+    "id": 220,
+    "bhajan": "hari",
+    "bhajan_type": "हरि भजन"
+  },
+  {
+    "bhajan_nepali": "एकादसि तुलसि",
+    "bhajan_english": "ekadasi tulasi aakadasi tulasi ekhadasi tulasi eakadasi ekdasi akdasi akadasi",
+    "id": 230,
+    "bhajan": "hari",
+    "bhajan_type": "हरि भजन"
+  },
+  {
+    "bhajan_nepali": "कृष्ण बैगुनि तर नभई नहुने",
+    "bhajan_english": "krishna gaye yamuna tare ra late vayo krishna baiguni tara navai nahune",
+    "id": 240,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "आगे आगे वाँसुरि वाला",
+    "bhajan_english": "aage aage bashuri wala paxi paxi age age ",
+    "id": 250,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "जय जय हो भोले बाबा",
+    "bhajan_english": "jai jai ho bhole baba jay jay ho bhole baba vole baba bholebaba volebaba jaya jaya ho",
+    "id": 260,
+    "bhajan": "shiva",
+    "bhajan_type": "शिव भजन"
+  },
+  {
+    "bhajan_nepali": "रामलाई अघि म लाउँला",
+    "bhajan_english": "ram lai aaghi ma laula aghi lamla lam",
+    "id": 270,
+    "bhajan": "ram",
+    "bhajan_type": "राम भजन"
+  },
+  {
+    "bhajan_nepali": "जय रामानुज",
+    "bhajan_english": "jaya ramanuja jai ramanuja jay ramanuja",
+    "id": 280,
+    "bhajan": "others",
+    "bhajan_type": "अन्य भजन"
+  },
+  {
+    "bhajan_nepali": "गुरु विना ज्ञान कैले मिल्दैन",
+    "bhajan_english": "guru bina gyan kaile mildaina kahile ghyan gan",
+    "id": 290,
+    "bhajan": "others",
+    "bhajan_type": "अन्य भजन"
+  },
+  {
+    "bhajan_nepali": "हे कृष्ण मलाई मीठो वंशी",
+    "bhajan_english": "hey krishna malai mitho banshi ma lai mito bansi bamsi he krishna",
+    "id": 300,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "भोलेबाबा मेरो दुःख कष्ट मेटाइदेउ",
+    "bhajan_english": "bhole baba mero dukha kasta metai deu vole baba mettai deu metaideu",
+    "id": 310,
+    "bhajan": "shiva",
+    "bhajan_type": "शिव भजन"
+  },
+  {
+    "bhajan_nepali": "बुन्दावनको डाँडै डाँडा",
+    "bhajan_english": "brinda banko dadai dada brindaban ko dandai danda vrindaban brindhaban brindhaban ko",
+    "id": 320,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "जनकपुरमा राम आए दुलाहा बनेर",
+    "bhajan_english": "janakpur ma ram aaye dulha banera rama dulaha",
+    "id": 340,
+    "bhajan": "ram",
+    "bhajan_type": "राम भजन"
+  },
+  {
+    "bhajan_nepali": "छेक्यो मलाई माया जालैले",
+    "bhajan_english": "chhekyo xekyo chekyo chhekyo malai maya jalaile chekyo malai maya jalaile jaalaile ",
+    "id": 350,
+    "bhajan": "others",
+    "bhajan_type": "अन्य भजन"
+  },
+  {
+    "bhajan_nepali": "भजन गर्न लेट भयो",
+    "bhajan_english": "radha timi nachhi deu phiriri radhatimi nachi deu nachideu nachideu bhajan garna late vayo krishna jee",
+    "id": 360,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "बुन्दावनको पाखामा बासुरीको भाकामा",
+    "bhajan_english": "brindaban ko pakha ma bashuri ko bhaka ma basuri ko basuriko bashuriko brindabana ko vrindaban brindabanko",
+    "id": 370,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "हृदयमा कृष्णको फोटो छ",
+    "bhajan_english": "hridaya ma krishna ko photo xa ridaya ma",
+    "id": 380,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "बाँसुरीको धुन सुनेर",
+    "bhajan_english": "basuri ko dhuna sunera bashuri ko dhuna sunera basuri ko dhun sunera sune ra dailo thunera thune ra",
+    "id": 390,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "शिरमाथि शंकरको चन्द्र झलल",
+    "bhajan_english": "shira mathi shankara ko chandra jhala shir mathi sankara ko sir mathi shirmathi sirmathi shiramathi sankarako candra",
+    "id": 400,
+    "bhajan": "shiva",
+    "bhajan_type": "शिव भजन"
+  },
+  {
+    "bhajan_nepali": "पुराण लाग्यो हरी तिम्रो मन्दिरैमा",
+    "bhajan_english": "purana lagyo hari timro mandirai ma mandir ma puran lagyo hari",
+    "id": 410,
+    "bhajan": "hari",
+    "bhajan_type": "हरि भजन"
+  },
+  {
+    "bhajan_nepali": "हे हरि दर्शन तिम्रो कहाँ होला",
+    "bhajan_english": "he hari darshana timro kaha hola hey hari darshana timro hehari darshana heyhari darshana timro kata",
+    "id": 420,
+    "bhajan": "hari",
+    "bhajan_type": "हरि भजन"
+  },
+  {
+    "bhajan_nepali": "नारायण हो ईश्वरको प्यारो नाम",
+    "bhajan_english": "narayan ho ishwar ko pyaro naam pyaro nam pyaronam pyaronaam narayan ho iswar narayanho narayanaho ",
+    "id": 430,
+    "bhajan": "hari",
+    "bhajan_type": "हरि भजन"
+  },
+  {
+    "bhajan_nepali": "धुन बज्यो धुन बज्यो पक्कै कृष्ण हुन",
+    "bhajan_english": "dhun bajyo dhun bajyo pakkai krishna hun pakai krishna",
+    "id": 440,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "हे कृष्ण शीरमा मुकुट टलल",
+    "bhajan_english": "he krishna shirma mukut tala la talala hey krishna sirma hei krishna heykrishna heikrishna hekrishna sirma mukut",
+    "id": 450,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "कृष्ण भजनमा लाग्यो मेरो मन",
+    "bhajan_english": "krishna bhajanma lagyo mero man krishna bhajaan ma mero maan",
+    "id": 460,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "रातो फरिया राधाले लगाउँदा",
+    "bhajan_english": "rato phariya radha le lagauda raato phariya ratophariya rato fariya rato faariya ratofariya rato faariya raato fariya raatofariya raato phariya ",
+    "id": 470,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "नौनी माखन चोरेको किन",
+    "bhajan_english": "nauni makhan choreko kina chore ko naauni nouni makha",
+    "id": 480,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "हाम्रो घर आउ है कन्हैया",
+    "bhajan_english": "hamro gharma aau hai kanhaiya haamro gharma hamrogharma haamro gharma kanaiya aauhai",
+    "id": 490,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "वंशी मीठो कृष्णले बजाको",
+    "bhajan_english": "banshi mitho krishna le bajako bamshi mitho baamshi mitho baanshi mitho bajaako bamsi bansi",
+    "id": 500,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "कृष्णको महिमा गाइरहनु होला",
+    "bhajan_english": "krishna ko mahima gai rahanu hola maahima gaairahanu gairahanu gairanu gai ranu ",
+    "id": 510,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "के होला प्रभु यो चोला",
+    "bhajan_english": "ke hola prabhu yo chola ke hoola pravu prabu chhola choola k hola prabhu khola prabhu kehola prabhu",
+    "id": 520,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "आईदेउन कृष्णजी हाम्राे मनैमा",
+    "bhajan_english": "aaideuna krishnajee aideuna krishnaji krishna ji krishna jee hemro manaima hamro manma hamromanaima hamromanma brindabanaima brindabanma vrindabanma brinda banaima",
+    "id": 530,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "मुटुमेरो सारै जलायौ हरी",
+    "bhajan_english": "mutumero sarai jalayeu mutu mero sarai jalayeu mutu merosarai jalayeu nata aayeu nata bolayeu",
+    "id": 540,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "फुलकाे माला त्याे तिम्राे गलामा",
+    "bhajan_english": "phulko mala tyo timro gala ma galama fulko ful ko phul ko gaalaa krishna कृष्ण",
+    "id": 550,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "गए गए हनुमान् जी, समुन्द्र पारिको",
+    "bhajan_english": "gaye gaye hannuman jee hanumanjee gayegaye gayagaya haanuman",
+    "id": 560,
+    "bhajan": "others",
+    "bhajan_type": "अन्य भजन"
+  },
+  {
+    "bhajan_nepali": "हरि सुन्दर नन्द मुकुन्द, हरि नारायण",
+    "bhajan_english": "hari sundara nanda mukunda hari narayan hari om naanda harisundarr mmukunda mookunda oomm oom",
+    "id": 570,
+    "bhajan": "hari",
+    "bhajan_type": "हरि भजन"
+  },
+  {
+    "bhajan_nepali": "हे कृष्ण लगाई देउ पार ",
+    "bhajan_english": "He krishna lagaideu para paara hey krishna",
+    "id": 580,
+    "bhajan": "krishna",
+    "bhajan_type": "कृष्ण भजन"
+  },
+  {
+    "bhajan_nepali": "हे लक्ष्मी नारायण आँए शरणमा",
+    "bhajan_english": "He laxmi narayan aaye saranma heylaxminarayan hei laxminarayan aye saranma",
+    "id": 590,
+    "bhajan": "hari",
+    "bhajan_type": "हरि भजन"
+  }
+]

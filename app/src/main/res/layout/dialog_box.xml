@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingBottom="40dp"
+    android:paddingRight="20dp"
+    android:paddingTop="30dp"
+    android:background="@color/bg_list_item"
+
+
+    >
+
+    <TextView
+        android:textColor="@color/text_primary"
+        android:id="@+id/dialog_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="New update available, please update to the recent release."
+        android:textSize="19dp"
+        android:gravity="left"
+        android:layout_marginLeft="18dp"
+
+        android:layout_marginBottom="30dp"/>
+
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="3dp"
+        android:gravity="right">
+
+        <TextView
+
+            android:textColor="#858484"
+            android:id="@+id/dialog_button_negative"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Cancel"
+            android:textSize="18dp"
+            android:layout_marginEnd="25dp"/>
+
+        <TextView
+
+            android:textColor="#E91E63"
+            android:id="@+id/dialog_button_positive"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="18dp"
+            android:text="Download"/>
+    </LinearLayout>
+</LinearLayout>  

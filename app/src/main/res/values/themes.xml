@@ -1,0 +1,26 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Theme.BhajanSangraha" parent="Theme.MaterialComponents.DayNight">
+        <!-- Primary brand color. -->
+        <item name="colorPrimary">@color/bg_list_item</item>
+        <item name="colorPrimaryVariant">@color/bg_app</item>
+        <item name="colorOnPrimary">@color/text_primary</item>
+        <!-- Secondary brand color. -->
+        <item name="colorSecondary">@color/accent_icon</item>
+        <item name="colorSecondaryVariant">@color/accent_icon</item>
+        <item name="colorOnSecondary">@color/bg_list_item</item>
+        <!-- Status bar color. -->
+        <item name="android:statusBarColor" tools:targetApi="21">@color/bg_list_item</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="23">true</item>
+        <!-- Customize your theme here. -->
+    </style>
+
+    <style name="Theme.BhajanSangraha.NoActionBar" parent="Theme.BhajanSangraha">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+    <style name="Theme.BhajanSangraha.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+
+    <style name="Theme.BhajanSangraha.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+</resources>  

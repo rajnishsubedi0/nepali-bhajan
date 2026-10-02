@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark Mode Semantic Colors -->
+    <color name="shiva_icon_tint">@color/accent_icon</color>
+    <color name="bg_app">#0B0C0E</color>
+    <color name="bg_list_item">#14151B</color>
+    <color name="text_primary">#F8FAFC</color>
+    <color name="text_secondary">#94A3B8</color>
+    <color name="accent_bg">#20212F</color>
+    <color name="accent_icon">#818CF8</color>
+    <color name="color_destructive">#F87171</color>
+</resources>
+  

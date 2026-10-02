@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/drawer_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    tools:context=".MainActivity">
+
+    <!-- Custom Animated Top App Bar & Search Bar Container inside content LinearLayout -->
+    <LinearLayout
+        android:id="@+id/main_root_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="@color/bg_app">
+
+        <!-- Custom Animated Top App Bar & Search Bar Container -->
+        <FrameLayout
+            android:id="@+id/app_bar_container"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:background="@color/bg_list_item"
+            android:elevation="4dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp">
+
+            <!-- STATE 1: Normal State Header -->
+            <RelativeLayout
+                android:id="@+id/header_normal_layout"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="visible">
+
+                <!-- Hamburger Button (custom modern 2bar pill layout) -->
+                <ImageView
+                    android:id="@+id/btn_menu_drawer"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:padding="12dp"
+                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:tint="@color/text_primary"
+                    android:src="@drawable/ic_menu_custom"
+                    android:contentDescription="Menu Icon" />
+
+                <!-- "Bhajans" / Songs Title styled like the user reference -->
+                <TextView
+                    android:id="@+id/header_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_toEndOf="@id/btn_menu_drawer"
+                    android:layout_centerVertical="true"
+                    android:layout_marginStart="8dp"
+                    android:text="Bhajans"
+                    android:textColor="@color/text_primary"
+                    android:textSize="26sp"
+                    android:textStyle="bold"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="-0.01" />
+
+                <!-- Actions Container -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_alignParentEnd="true"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <!-- Search Button (Custom Q icon) -->
+                    <ImageView
+                        android:id="@+id/btn_search_header"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:padding="12dp"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:src="@drawable/ic_search_custom"
+                        android:contentDescription="Search Icon" />
+
+                    <View
+                        android:layout_width="8dp"
+                        android:layout_height="match_parent" />
+
+                    <!-- Favorite Button -->
+                    <ImageView
+                        android:id="@+id/btn_favourite_header"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:padding="11dp"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:tint="@color/text_primary"
+                        android:src="@drawable/ic_heart"
+                        android:contentDescription="Favorites Icon" />
+                </LinearLayout>
+            </RelativeLayout>
+
+            <!-- STATE 2: Expanded State Search Bar (Exact Style from Photos) -->
+            <LinearLayout
+                android:id="@+id/header_search_layout"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_gravity="center_vertical"
+                android:background="@drawable/bg_search_input"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:visibility="gone">
+
+                <!-- Search Input field -->
+                <EditText
+                    android:id="@+id/et_search_input"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="@android:color/transparent"
+                    android:hint="Search..."
+                    android:imeOptions="actionSearch"
+                    android:inputType="text"
+                    android:maxLines="1"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_secondary"
+                    android:textSize="17sp"
+                    android:fontFamily="sans-serif"
+                    android:textStyle="normal"
+                    android:textCursorDrawable="@null" />
+
+                <!-- Close icon on the right -->
+                <ImageView
+                    android:id="@+id/btn_search_clear"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:padding="6dp"
+                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:src="@drawable/ic_close_custom"
+                    android:contentDescription="Close Search Icon" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- Categories Horizontal Filter List -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/categoryRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:clipToPadding="false"
+            android:scrollbars="none"
+            android:background="@color/bg_app" />
+
+        <!-- List of Bhajans with Customized Floating Scrollbar -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:background="@color/bg_app"
+            app:fastScrollEnabled="true"
+            app:fastScrollVerticalThumbDrawable="@drawable/fastscroll_thumb_vertical"
+            app:fastScrollVerticalTrackDrawable="@drawable/fastscroll_track_vertical"
+            app:fastScrollHorizontalThumbDrawable="@drawable/fastscroll_thumb_horizontal"
+            app:fastScrollHorizontalTrackDrawable="@drawable/fastscroll_track_horizontal" />
+    </LinearLayout>
+
+    <!-- Navigation Drawer layout included dynamically -->
+    <include layout="@layout/nav_drawer_layout" />
+
+</androidx.drawerlayout.widget.DrawerLayout>
