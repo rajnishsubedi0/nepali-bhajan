@@ -34,6 +34,25 @@ jobs:
           echo "$SIGNING_KEY" | base64 -d > ${{ github.workspace }}/my-upload-key.jks
           ls -la ${{ github.workspace }}/my-upload-key.jks
 
+              - name: Test keystore passwords
+        env:
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "Testing store password..."
+          keytool -list -keystore ${{ github.workspace }}/my-upload-key.jks \
+            -storepass "$STORE_PASSWORD" \
+            && echo "✅ Store password OK" \
+            || echo "❌ Store password WRONG"
+          
+          echo "Testing key alias + password..."
+          keytool -list -keystore ${{ github.workspace }}/my-upload-key.jks \
+            -storepass "$STORE_PASSWORD" \
+            -alias "$KEY_ALIAS" \
+            && echo "✅ Alias OK" \
+            || echo "❌ Alias wrong"
+
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
