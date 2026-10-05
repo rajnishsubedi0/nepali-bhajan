@@ -70,6 +70,37 @@
             android:background="#15808080"
             android:layout_marginBottom="24dp" />
 
+        <!-- NEW: Audio Stream Navigation Button -->
+        <LinearLayout
+            android:id="@+id/nav_audio_stream"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="?android:attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:layout_marginBottom="16dp">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_audio_stream"
+                android:tint="@color/accent_icon"
+                android:layout_marginEnd="16dp"
+                android:contentDescription="Audio Stream Icon" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Audio Stream"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                android:fontFamily="sans-serif-medium"/>
+        </LinearLayout>
+
     </LinearLayout>
 
     <!-- Bottom creator card section -->

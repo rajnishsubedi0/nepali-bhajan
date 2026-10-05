@@ -13,6 +13,7 @@ import com.rkant.bhajanapp.FirstActivities.DB_Handler;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 
@@ -138,6 +139,27 @@ public class MainActivity extends AppCompatActivity {
         drawerLayout = findViewById(R.id.drawer_layout);
         android.widget.ImageView btnMenuDrawer = findViewById(R.id.btn_menu_drawer);
         android.widget.ImageView imgHeartBeat = findViewById(R.id.img_heart_beat);
+
+        // Hook up Audio Stream Drawer Button
+        LinearLayout navAudioStream = findViewById(R.id.nav_audio_stream);
+        if (navAudioStream != null) {
+            navAudioStream.setOnClickListener(new android.view.View.OnClickListener() {
+                @Override
+                public void onClick(android.view.View v) {
+                    if (drawerLayout != null) {
+                        drawerLayout.closeDrawer(androidx.core.view.GravityCompat.START);
+                    }
+                    // Small delay to let drawer close smoothly before opening new activity
+                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            Intent intent = new Intent(MainActivity.this, AudioStreamActivity.class);
+                            startActivity(intent);
+                        }
+                    }, 250);
+                }
+            });
+        }
 
         if (btnMenuDrawer != null) {
             btnMenuDrawer.setOnClickListener(new android.view.View.OnClickListener() {
