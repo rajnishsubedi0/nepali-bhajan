@@ -1,0 +1,75 @@
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.google.devtools.ksp)
+}
+
+android {
+    namespace 'com.rkant.bhajanapp'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.rkant.bhajanapp"
+        minSdk 24
+        targetSdk 35
+        versionCode 5
+        versionName "1.0.5"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        release {
+            def keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
+            storeFile file(keystorePath)
+            storePassword System.getenv("STORE_PASSWORD")
+            keyAlias System.getenv("KEY_ALIAS") ?: "upload"
+            keyPassword System.getenv("KEY_PASSWORD")
+            enableV1Signing true
+            enableV2Signing true
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    buildFeatures {
+        buildConfig true
+        viewBinding true
+    }
+}
+
+dependencies {
+    implementation "androidx.appcompat:appcompat:1.6.1"
+    implementation "com.google.android.material:material:1.8.0"
+    implementation "androidx.constraintlayout:constraintlayout:2.1.4"
+    implementation "androidx.navigation:navigation-fragment:2.7.7"
+    implementation "androidx.navigation:navigation-ui:2.7.7"
+
+    def lifecycle_version = "2.6.1"
+    implementation "androidx.lifecycle:lifecycle-viewmodel:$lifecycle_version"
+    implementation "androidx.lifecycle:lifecycle-livedata:$lifecycle_version"
+
+    implementation libs.androidx.core.ktx
+    implementation libs.androidx.room.runtime
+    implementation libs.androidx.room.ktx
+    implementation libs.retrofit
+    implementation libs.converter.moshi
+    implementation libs.moshi.kotlin
+    implementation libs.okhttp
+    implementation libs.logging.interceptor
+    implementation libs.kotlinx.coroutines.android
+    implementation libs.kotlinx.coroutines.core
+
+    ksp libs.androidx.room.compiler
+    ksp libs.moshi.kotlin.codegen
+}

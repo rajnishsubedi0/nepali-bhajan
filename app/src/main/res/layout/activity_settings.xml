@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:letterSpacing="0.08"
+                android:text="APPEARANCE"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="20dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Theme"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="Choose how the app looks: follow system, always light, or always dark."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="15sp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/bg_segment"
+                    android:orientation="horizontal"
+                    android:padding="4dp">
+                    <TextView android:id="@+id/btn_system" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:gravity="center" android:text="System" android:textStyle="bold" />
+                    <TextView android:id="@+id/btn_light" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:gravity="center" android:text="Light" android:textStyle="bold" />
+                    <TextView android:id="@+id/btn_dark" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:gravity="center" android:text="Dark" android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:letterSpacing="0.08"
+                android:text="TEXT SIZE"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <!-- List font size card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="20dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="List Text Size"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="Bhajan titles and Nepali numbers in the main list."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="15sp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <TextView
+                        android:id="@+id/btn_list_minus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="44dp"
+                        android:background="@drawable/bg_pill"
+                        android:gravity="center"
+                        android:paddingHorizontal="22dp"
+                        android:text="A-"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:id="@+id/tv_list_size"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:text="Medium (19sp)"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:id="@+id/btn_list_plus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="44dp"
+                        android:background="@drawable/bg_pill"
+                        android:gravity="center"
+                        android:paddingHorizontal="22dp"
+                        android:text="A+"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Lyric font size card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="20dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Lyric Text Size"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="Reading size inside the bhajan lyric view."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="15sp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <TextView
+                        android:id="@+id/btn_lyric_minus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="44dp"
+                        android:background="@drawable/bg_pill"
+                        android:gravity="center"
+                        android:paddingHorizontal="22dp"
+                        android:text="A-"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:id="@+id/tv_lyric_size"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:text="Medium (21sp)"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:id="@+id/btn_lyric_plus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="44dp"
+                        android:background="@drawable/bg_pill"
+                        android:gravity="center"
+                        android:paddingHorizontal="22dp"
+                        android:text="A+"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:letterSpacing="0.08"
+                android:text="READING"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="20dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Screen Timeout"
+                    android:textColor="@color/text_primary"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="Keep the screen on while reading lyrics. Default is 3 minutes."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="15sp" />
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:scrollbars="none">
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+                        <TextView android:id="@+id/btn_t1" android:layout_width="wrap_content" android:layout_height="40dp" android:layout_marginEnd="8dp" android:background="@drawable/bg_pill" android:gravity="center" android:paddingHorizontal="18dp" android:text="1 min" android:textStyle="bold" />
+                        <TextView android:id="@+id/btn_t3" android:layout_width="wrap_content" android:layout_height="40dp" android:layout_marginEnd="8dp" android:background="@drawable/bg_pill" android:gravity="center" android:paddingHorizontal="18dp" android:text="3 min" android:textStyle="bold" />
+                        <TextView android:id="@+id/btn_t5" android:layout_width="wrap_content" android:layout_height="40dp" android:layout_marginEnd="8dp" android:background="@drawable/bg_pill" android:gravity="center" android:paddingHorizontal="18dp" android:text="5 min" android:textStyle="bold" />
+                        <TextView android:id="@+id/btn_t10" android:layout_width="wrap_content" android:layout_height="40dp" android:layout_marginEnd="8dp" android:background="@drawable/bg_pill" android:gravity="center" android:paddingHorizontal="18dp" android:text="10 min" android:textStyle="bold" />
+                        <TextView android:id="@+id/btn_talways" android:layout_width="wrap_content" android:layout_height="40dp" android:background="@drawable/bg_pill" android:gravity="center" android:paddingHorizontal="18dp" android:text="Always" android:textStyle="bold" />
+                    </LinearLayout>
+                </HorizontalScrollView>
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+    <TextView
+        android:id="@+id/btn_save"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_margin="16dp"
+        android:background="@drawable/bg_button_accent"
+        android:gravity="center"
+        android:text="Save Settings"
+        android:textColor="@color/on_accent"
+        android:textSize="17sp"
+        android:textStyle="bold" />
+</LinearLayout>
