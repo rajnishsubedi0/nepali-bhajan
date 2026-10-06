@@ -55,12 +55,22 @@ public class AudioAdapter extends RecyclerView.Adapter<AudioAdapter.VH> {
         h.title.setText(t.title);
 
         if (t.durationSec > 0) h.duration.setText(Helper.formatTime(t.durationSec * 1000L));
-        else h.duration.setText("Stream");
+        else h.duration.setText("--:--");
 
         boolean isFav = AudioPreferences.isFav(ctx, t.id);
         h.fav.setVisibility(isFav ? View.VISIBLE : View.GONE);
 
-        h.download.setColorFilter(ctx.getColor(t.isDownloaded ? R.color.accent : R.color.text_secondary));
+        // Download-state icon
+        if (t.isDownloaded) {
+            h.download.setImageResource(R.drawable.ic_check);
+            h.download.setColorFilter(ctx.getColor(R.color.accent));
+        } else if (t.downloadState == AudioTrack.STATE_DOWNLOADING) {
+            h.download.setImageResource(R.drawable.ic_download);
+            h.download.setColorFilter(ctx.getColor(R.color.accent));
+        } else {
+            h.download.setImageResource(R.drawable.ic_download);
+            h.download.setColorFilter(ctx.getColor(R.color.text_secondary));
+        }
 
         boolean isThis = t.id.equals(currentPlayingId);
         h.row.setBackgroundColor(isThis ? ctx.getColor(R.color.muted) : 0x00000000);

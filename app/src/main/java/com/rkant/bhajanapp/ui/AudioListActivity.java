@@ -1,7 +1,11 @@
 package com.rkant.bhajanapp.ui;
 
 import android.Manifest;
+import android.app.DownloadManager;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -10,9 +14,7 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
-import com.rkant.bhajanapp.utils.BatteryHelper;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -24,16 +26,18 @@ import com.rkant.bhajanapp.R;
 import com.rkant.bhajanapp.adapter.AudioAdapter;
 import com.rkant.bhajanapp.model.AudioTrack;
 import com.rkant.bhajanapp.utils.AudioPreferences;
-import com.rkant.bhajanapp.utils.M3U8Parser;
+import com.rkant.bhajanapp.utils.AudioRepository;
+import com.rkant.bhajanapp.utils.BatteryHelper;
+import com.rkant.bhajanapp.utils.DownloadHelper;
+import com.rkant.bhajanapp.utils.Helper;
 import com.rkant.bhajanapp.utils.PlaybackManager;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Executors;
 
 public class AudioListActivity extends AppCompatActivity implements AudioAdapter.OnTrackAction {
 
-    private static final String M3U8_URL = "https://rajnishsubedi0.github.io/audio-streams/master.m3u8";
     private static final int REQ_NOTIFICATION = 1001;
 
     private AudioAdapter adapter;
@@ -61,18 +65,45 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
         }
     };
 
+    private final BroadcastReceiver downloadReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (!DownloadManager.ACTION_DOWNLOAD_COMPLETE.equals(intent.getAction())) return;
+            long downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+            String trackId = DownloadHelper.trackIdForDownload(AudioListActivity.this, downloadId);
+            if (trackId == null) return;
+
+            for (AudioTrack t : tracks) {
+                if (t.id.equals(trackId)) {
+                    if (DownloadHelper.isDownloaded(AudioListActivity.this, trackId)) {
+                        File f = DownloadHelper.getLocalFile(AudioListActivity.this, trackId);
+                        t.isDownloaded = true;
+                        t.downloadState = AudioTrack.STATE_DOWNLOADED;
+                        if (f != null) t.localPath = f.getAbsolutePath();
+                        Toast.makeText(AudioListActivity.this, "Downloaded: " + t.title, Toast.LENGTH_SHORT).show();
+                    } else {
+                        t.downloadState = AudioTrack.STATE_NOT_DOWNLOADED;
+                        Toast.makeText(AudioListActivity.this, "Download failed", Toast.LENGTH_SHORT).show();
+                    }
+                    adapter.notifyDataSetChanged();
+                    break;
+                }
+            }
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_audio_list);
 
         requestNotificationPermission();
+        BatteryHelper.showGuideIfNeeded(this);
 
         RecyclerView rv = findViewById(R.id.rv_audio_list);
         rv.setLayoutManager(new LinearLayoutManager(this));
         adapter = new AudioAdapter(tracks, this, this);
         rv.setAdapter(adapter);
-        BatteryHelper.showGuideIfNeeded(this);
 
         swipeRefresh = findViewById(R.id.swipe_refresh);
         swipeRefresh.setOnRefreshListener(this::loadAudios);
@@ -80,10 +111,17 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
         findViewById(R.id.btn_refresh).setOnClickListener(v -> loadAudios());
 
-        PlaybackManager.requestBatteryExemption(this);
-
         setupMiniPlayer();
         loadAudios();
+
+        IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
+        ContextCompat.registerReceiver(this, downloadReceiver, filter, ContextCompat.RECEIVER_EXPORTED);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        try { unregisterReceiver(downloadReceiver); } catch (Exception ignored) {}
     }
 
     private void requestNotificationPermission() {
@@ -136,21 +174,34 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
 
     private void loadAudios() {
         swipeRefresh.setRefreshing(true);
-        Executors.newSingleThreadExecutor().execute(() -> {
-            List<AudioTrack> fetched = M3U8Parser.fetchAndParse(M3U8_URL);
-            // attach download state
-            for (AudioTrack t : fetched) {
-                String local = AudioPreferences.getLocalPath(this, t.id);
-                if (local != null) { t.isDownloaded = true; t.localPath = local; }
+        AudioRepository.loadTracks(new AudioRepository.Callback() {
+            @Override
+            public void onLoaded(List<AudioTrack> loaded) {
+                runOnUiThread(() -> {
+                    for (AudioTrack t : loaded) {
+                        if (DownloadHelper.isDownloaded(AudioListActivity.this, t.id)) {
+                            File f = DownloadHelper.getLocalFile(AudioListActivity.this, t.id);
+                            t.isDownloaded = true;
+                            t.downloadState = AudioTrack.STATE_DOWNLOADED;
+                            if (f != null) t.localPath = f.getAbsolutePath();
+                        }
+                    }
+                    tracks.clear();
+                    tracks.addAll(loaded);
+                    adapter.notifyDataSetChanged();
+                    swipeRefresh.setRefreshing(false);
+                    if (tracks.isEmpty())
+                        Toast.makeText(AudioListActivity.this, "No audio found", Toast.LENGTH_SHORT).show();
+                });
             }
-            runOnUiThread(() -> {
-                tracks.clear();
-                tracks.addAll(fetched);
-                adapter.notifyDataSetChanged();
-                swipeRefresh.setRefreshing(false);
-                if (tracks.isEmpty())
-                    Toast.makeText(this, "No audio found", Toast.LENGTH_SHORT).show();
-            });
+
+            @Override
+            public void onError(String message) {
+                runOnUiThread(() -> {
+                    swipeRefresh.setRefreshing(false);
+                    Toast.makeText(AudioListActivity.this, "Failed to load audio list", Toast.LENGTH_SHORT).show();
+                });
+            }
         });
     }
 
@@ -160,23 +211,33 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
         PlaybackManager pm = PlaybackManager.getInstance();
         pm.connect(this);
 
-        // FIX: Check if the tapped track is already the currently loaded track
         String currentId = pm.getCurrentMediaId();
         if (track.id != null && track.id.equals(currentId)) {
-            // It's already loaded/playing. Just open the UI without resetting the position.
             startActivity(new Intent(this, MusicPlayerActivity.class));
             return;
         }
-
-        // It's a different track. Load the new playlist and start playing.
         pm.playList(tracks, position);
         startActivity(new Intent(this, MusicPlayerActivity.class));
     }
 
     @Override
     public void onDownloadClick(AudioTrack track) {
-        Toast.makeText(this, "Offline download requires MP3 sources. This stream is online-only.",
-                Toast.LENGTH_LONG).show();
+        if (track.isDownloaded) {
+            Helper.showConfirm(this, "Delete download",
+                    "Remove \"" + track.title + "\" from offline storage?", "Delete", true, () -> {
+                        DownloadHelper.delete(this, track.id);
+                        track.isDownloaded = false;
+                        track.localPath = null;
+                        track.downloadState = AudioTrack.STATE_NOT_DOWNLOADED;
+                        adapter.notifyDataSetChanged();
+                        Toast.makeText(this, "Deleted", Toast.LENGTH_SHORT).show();
+                    });
+        } else {
+            track.downloadState = AudioTrack.STATE_DOWNLOADING;
+            adapter.notifyDataSetChanged();
+            DownloadHelper.enqueue(this, track);
+            Toast.makeText(this, "Downloading…", Toast.LENGTH_SHORT).show();
+        }
     }
 
     @Override
