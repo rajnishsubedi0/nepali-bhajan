@@ -22,6 +22,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import com.google.android.material.tabs.TabLayout;
 import com.rkant.bhajanapp.R;
 import com.rkant.bhajanapp.adapter.AudioAdapter;
 import com.rkant.bhajanapp.model.AudioTrack;
@@ -41,8 +42,10 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
     private static final int REQ_NOTIFICATION = 1001;
 
     private AudioAdapter adapter;
-    private final List<AudioTrack> tracks = new ArrayList<>();
+    private final List<AudioTrack> allTracks = new ArrayList<>();
+    private final List<AudioTrack> displayedTracks = new ArrayList<>();
     private SwipeRefreshLayout swipeRefresh;
+    private int currentTab = 0; // 0 = All, 1 = Favourites
 
     private View miniPlayer;
     private TextView miniTitle;
@@ -73,7 +76,7 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
             String trackId = DownloadHelper.trackIdForDownload(AudioListActivity.this, downloadId);
             if (trackId == null) return;
 
-            for (AudioTrack t : tracks) {
+            for (AudioTrack t : allTracks) {
                 if (t.id.equals(trackId)) {
                     if (DownloadHelper.isDownloaded(AudioListActivity.this, trackId)) {
                         File f = DownloadHelper.getLocalFile(AudioListActivity.this, trackId);
@@ -85,7 +88,7 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
                         t.downloadState = AudioTrack.STATE_NOT_DOWNLOADED;
                         Toast.makeText(AudioListActivity.this, "Download failed", Toast.LENGTH_SHORT).show();
                     }
-                    adapter.notifyDataSetChanged();
+                    refreshDisplayedList();
                     break;
                 }
             }
@@ -102,7 +105,7 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
 
         RecyclerView rv = findViewById(R.id.rv_audio_list);
         rv.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new AudioAdapter(tracks, this, this);
+        adapter = new AudioAdapter(displayedTracks, this, this);
         rv.setAdapter(adapter);
 
         swipeRefresh = findViewById(R.id.swipe_refresh);
@@ -111,11 +114,27 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
         findViewById(R.id.btn_refresh).setOnClickListener(v -> loadAudios());
 
+        setupTabs();
         setupMiniPlayer();
         loadAudios();
 
         IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
         ContextCompat.registerReceiver(this, downloadReceiver, filter, ContextCompat.RECEIVER_EXPORTED);
+    }
+
+    private void setupTabs() {
+        TabLayout tabs = findViewById(R.id.audio_tabs);
+        tabs.addTab(tabs.newTab().setText("All"));
+        tabs.addTab(tabs.newTab().setText("Favourites"));
+        tabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                currentTab = tab.getPosition();
+                refreshDisplayedList();
+            }
+            @Override public void onTabUnselected(TabLayout.Tab tab) {}
+            @Override public void onTabReselected(TabLayout.Tab tab) {}
+        });
     }
 
     @Override
@@ -178,6 +197,7 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
             @Override
             public void onLoaded(List<AudioTrack> loaded) {
                 runOnUiThread(() -> {
+                    // Check download state for each track
                     for (AudioTrack t : loaded) {
                         if (DownloadHelper.isDownloaded(AudioListActivity.this, t.id)) {
                             File f = DownloadHelper.getLocalFile(AudioListActivity.this, t.id);
@@ -186,11 +206,11 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
                             if (f != null) t.localPath = f.getAbsolutePath();
                         }
                     }
-                    tracks.clear();
-                    tracks.addAll(loaded);
-                    adapter.notifyDataSetChanged();
+                    allTracks.clear();
+                    allTracks.addAll(loaded);
+                    refreshDisplayedList();
                     swipeRefresh.setRefreshing(false);
-                    if (tracks.isEmpty())
+                    if (allTracks.isEmpty())
                         Toast.makeText(AudioListActivity.this, "No audio found", Toast.LENGTH_SHORT).show();
                 });
             }
@@ -205,6 +225,22 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
         });
     }
 
+    private void refreshDisplayedList() {
+        displayedTracks.clear();
+        if (currentTab == 0) {
+            // All tracks
+            displayedTracks.addAll(allTracks);
+        } else {
+            // Favourites only
+            for (AudioTrack t : allTracks) {
+                if (AudioPreferences.isFav(this, t.id)) {
+                    displayedTracks.add(t);
+                }
+            }
+        }
+        adapter.notifyDataSetChanged();
+    }
+
     // ----- AudioAdapter.OnTrackAction -----
     @Override
     public void onPlayClick(AudioTrack track, int position) {
@@ -216,7 +252,9 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
             startActivity(new Intent(this, MusicPlayerActivity.class));
             return;
         }
-        pm.playList(tracks, position);
+
+        // Play from the displayed list (respects current tab filter)
+        pm.playList(displayedTracks, position);
         startActivity(new Intent(this, MusicPlayerActivity.class));
     }
 
@@ -229,12 +267,16 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
                         track.isDownloaded = false;
                         track.localPath = null;
                         track.downloadState = AudioTrack.STATE_NOT_DOWNLOADED;
-                        adapter.notifyDataSetChanged();
+                        refreshDisplayedList();
                         Toast.makeText(this, "Deleted", Toast.LENGTH_SHORT).show();
                     });
         } else {
+            if (track.downloadState == AudioTrack.STATE_DOWNLOADING) {
+                Toast.makeText(this, "Already downloading...", Toast.LENGTH_SHORT).show();
+                return;
+            }
             track.downloadState = AudioTrack.STATE_DOWNLOADING;
-            adapter.notifyDataSetChanged();
+            refreshDisplayedList();
             DownloadHelper.enqueue(this, track);
             Toast.makeText(this, "Downloading…", Toast.LENGTH_SHORT).show();
         }
@@ -243,6 +285,6 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
     @Override
     public void onFavClick(AudioTrack track) {
         AudioPreferences.toggleFav(this, track.id);
-        adapter.notifyDataSetChanged();
+        refreshDisplayedList();
     }
 }

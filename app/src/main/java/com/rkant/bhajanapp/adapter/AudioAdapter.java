@@ -57,10 +57,11 @@ public class AudioAdapter extends RecyclerView.Adapter<AudioAdapter.VH> {
         if (t.durationSec > 0) h.duration.setText(Helper.formatTime(t.durationSec * 1000L));
         else h.duration.setText("--:--");
 
+        // Favourite state
         boolean isFav = AudioPreferences.isFav(ctx, t.id);
         h.fav.setVisibility(isFav ? View.VISIBLE : View.GONE);
 
-        // Download-state icon
+        // Download state icon
         if (t.isDownloaded) {
             h.download.setImageResource(R.drawable.ic_check);
             h.download.setColorFilter(ctx.getColor(R.color.accent));

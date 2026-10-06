@@ -1,5 +1,8 @@
 package com.rkant.bhajanapp.model;
 
+import android.net.Uri;
+import java.io.File;
+
 public class AudioTrack {
     public static final int STATE_NOT_DOWNLOADED = 0;
     public static final int STATE_DOWNLOADING = 1;
@@ -8,11 +11,11 @@ public class AudioTrack {
     public String id;
     public String title;
     public String url;
-    public int durationSec;      // -1 = unknown
+    public int durationSec;
     public String category;
     public boolean isDownloaded;
     public String localPath;
-    public int downloadState = STATE_NOT_DOWNLOADED; // transient UI state
+    public int downloadState = STATE_NOT_DOWNLOADED;
 
     public AudioTrack(String id, String title, String url, int durationSec) {
         this.id = id;
@@ -21,8 +24,18 @@ public class AudioTrack {
         this.durationSec = durationSec;
     }
 
-    /** Plays the offline MP3 if downloaded, otherwise streams the online URL. */
+    /**
+     * Returns a proper URI string for ExoPlayer:
+     * - file:// URI if downloaded locally
+     * - http(s) URL if streaming online
+     */
     public String playableUrl() {
-        return (isDownloaded && localPath != null) ? localPath : url;
+        if (isDownloaded && localPath != null) {
+            File f = new File(localPath);
+            if (f.exists()) {
+                return Uri.fromFile(f).toString();
+            }
+        }
+        return url;
     }
 }

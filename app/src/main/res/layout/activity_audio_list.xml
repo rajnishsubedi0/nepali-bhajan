@@ -41,6 +41,17 @@
             android:tint="@color/text_secondary" />
     </LinearLayout>
 
+    <!-- Tabs: All / Favourites -->
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/audio_tabs"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@color/card"
+        app:tabIndicatorColor="@color/accent"
+        app:tabSelectedTextColor="@color/accent"
+        app:tabTextColor="@color/text_secondary"
+        xmlns:app="http://schemas.android.com/apk/res-auto" />
+
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipe_refresh"
         android:layout_width="match_parent"
