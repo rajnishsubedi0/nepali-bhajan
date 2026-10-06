@@ -45,7 +45,7 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
     private final List<AudioTrack> allTracks = new ArrayList<>();
     private final List<AudioTrack> displayedTracks = new ArrayList<>();
     private SwipeRefreshLayout swipeRefresh;
-    private int currentTab = 0; // 0 = All, 1 = Favourites
+    private int currentTab = 0; // 0 = All, 1 = Favourites, 2 = Downloads
 
     private View miniPlayer;
     private TextView miniTitle;
@@ -126,6 +126,7 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
         TabLayout tabs = findViewById(R.id.audio_tabs);
         tabs.addTab(tabs.newTab().setText("All"));
         tabs.addTab(tabs.newTab().setText("Favourites"));
+        tabs.addTab(tabs.newTab().setText("Downloads")); // NEW DOWNLOADS TAB
         tabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
@@ -197,7 +198,6 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
             @Override
             public void onLoaded(List<AudioTrack> loaded) {
                 runOnUiThread(() -> {
-                    // Check download state for each track
                     for (AudioTrack t : loaded) {
                         if (DownloadHelper.isDownloaded(AudioListActivity.this, t.id)) {
                             File f = DownloadHelper.getLocalFile(AudioListActivity.this, t.id);
@@ -230,10 +230,17 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
         if (currentTab == 0) {
             // All tracks
             displayedTracks.addAll(allTracks);
-        } else {
+        } else if (currentTab == 1) {
             // Favourites only
             for (AudioTrack t : allTracks) {
                 if (AudioPreferences.isFav(this, t.id)) {
+                    displayedTracks.add(t);
+                }
+            }
+        } else if (currentTab == 2) {
+            // Downloads only
+            for (AudioTrack t : allTracks) {
+                if (t.isDownloaded) {
                     displayedTracks.add(t);
                 }
             }
@@ -241,7 +248,6 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
         adapter.notifyDataSetChanged();
     }
 
-    // ----- AudioAdapter.OnTrackAction -----
     @Override
     public void onPlayClick(AudioTrack track, int position) {
         PlaybackManager pm = PlaybackManager.getInstance();
@@ -252,8 +258,6 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
             startActivity(new Intent(this, MusicPlayerActivity.class));
             return;
         }
-
-        // Play from the displayed list (respects current tab filter)
         pm.playList(displayedTracks, position);
         startActivity(new Intent(this, MusicPlayerActivity.class));
     }
@@ -261,14 +265,22 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
     @Override
     public void onDownloadClick(AudioTrack track) {
         if (track.isDownloaded) {
-            Helper.showConfirm(this, "Delete download",
-                    "Remove \"" + track.title + "\" from offline storage?", "Delete", true, () -> {
+            // CONFIRMATION DIALOG FOR DELETING DOWNLOADS
+            Helper.showConfirm(this, "Delete Download",
+                    "Are you sure you want to delete \"" + track.title + "\" from your device?", "Delete", true, () -> {
+
+                        // Safety: Stop playback if the deleted track is currently playing
+                        PlaybackManager pm = PlaybackManager.getInstance();
+                        if (track.id.equals(pm.getCurrentMediaId())) {
+                            pm.stopAndClear();
+                        }
+
                         DownloadHelper.delete(this, track.id);
                         track.isDownloaded = false;
                         track.localPath = null;
                         track.downloadState = AudioTrack.STATE_NOT_DOWNLOADED;
                         refreshDisplayedList();
-                        Toast.makeText(this, "Deleted", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Download deleted", Toast.LENGTH_SHORT).show();
                     });
         } else {
             if (track.downloadState == AudioTrack.STATE_DOWNLOADING) {
@@ -284,7 +296,20 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
 
     @Override
     public void onFavClick(AudioTrack track) {
-        AudioPreferences.toggleFav(this, track.id);
-        refreshDisplayedList();
+        boolean isCurrentlyFav = AudioPreferences.isFav(this, track.id);
+        if (isCurrentlyFav) {
+            // CONFIRMATION DIALOG FOR REMOVING FAVOURITES
+            Helper.showConfirm(this, "Remove from Favourites",
+                    "Remove \"" + track.title + "\" from your favourites list?", "Remove", true, () -> {
+                        AudioPreferences.toggleFav(this, track.id);
+                        refreshDisplayedList();
+                        Toast.makeText(this, "Removed from favourites", Toast.LENGTH_SHORT).show();
+                    });
+        } else {
+            // Just add it, no confirmation needed
+            AudioPreferences.toggleFav(this, track.id);
+            refreshDisplayedList();
+            Toast.makeText(this, "Added to favourites", Toast.LENGTH_SHORT).show();
+        }
     }
 }

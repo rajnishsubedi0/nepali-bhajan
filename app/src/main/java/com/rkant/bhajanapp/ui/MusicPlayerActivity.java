@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.media3.common.C;
@@ -12,6 +13,7 @@ import androidx.media3.common.Player;
 
 import com.rkant.bhajanapp.R;
 import com.rkant.bhajanapp.service.BhajanMediaService;
+import com.rkant.bhajanapp.utils.AudioPreferences;
 import com.rkant.bhajanapp.utils.Helper;
 import com.rkant.bhajanapp.utils.PlaybackManager;
 
@@ -19,15 +21,22 @@ public class MusicPlayerActivity extends AppCompatActivity {
 
     private TextView tvTitle, tvCurrentTime, tvTotalTime;
     private SeekBar seekBar;
-    private ImageView btnPlayPause, btnShuffle, btnRepeat;
+    private ImageView btnPlayPause, btnShuffle, btnRepeat, btnFav;
     private boolean isTracking = false;
     private long currentDuration = C.TIME_UNSET;
+    private String currentMediaId = null;
 
     private final PlaybackManager.Listener playbackListener = new PlaybackManager.Listener() {
         @Override
         public void onStateChanged(boolean isPlaying, String title, String mediaId) {
             if (title != null && !title.isEmpty()) tvTitle.setText(title);
             btnPlayPause.setImageResource(isPlaying ? R.drawable.ic_pause : R.drawable.ic_play_arrow);
+
+            // Update favourite button when track changes
+            if (mediaId != null && !mediaId.equals(currentMediaId)) {
+                currentMediaId = mediaId;
+                updateFavButton();
+            }
         }
 
         @Override
@@ -64,12 +73,12 @@ public class MusicPlayerActivity extends AppCompatActivity {
         btnPlayPause = findViewById(R.id.btn_play_pause);
         btnShuffle = findViewById(R.id.btn_shuffle);
         btnRepeat = findViewById(R.id.btn_repeat);
+        btnFav = findViewById(R.id.btn_fav);
         ImageView btnPrev = findViewById(R.id.btn_prev);
         ImageView btnNext = findViewById(R.id.btn_next);
 
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
 
-        // STOP: stops playback, stops the service and exits the app
         findViewById(R.id.btn_stop).setOnClickListener(v -> {
             PlaybackManager.getInstance().stopAndClear();
             stopService(new Intent(this, BhajanMediaService.class));
@@ -82,6 +91,25 @@ public class MusicPlayerActivity extends AppCompatActivity {
         btnShuffle.setOnClickListener(v -> PlaybackManager.getInstance().toggleShuffle());
         btnRepeat.setOnClickListener(v -> PlaybackManager.getInstance().cycleRepeat());
 
+        // Favourite button click handler
+        btnFav.setOnClickListener(v -> {
+            if (currentMediaId == null) return;
+
+            boolean isCurrentlyFav = AudioPreferences.isFav(this, currentMediaId);
+            if (isCurrentlyFav) {
+                Helper.showConfirm(this, "Remove from Favourites",
+                        "Remove this bhajan from your favourites list?", "Remove", true, () -> {
+                            AudioPreferences.toggleFav(this, currentMediaId);
+                            updateFavButton();
+                            Toast.makeText(this, "Removed from favourites", Toast.LENGTH_SHORT).show();
+                        });
+            } else {
+                AudioPreferences.toggleFav(this, currentMediaId);
+                updateFavButton();
+                Toast.makeText(this, "Added to favourites", Toast.LENGTH_SHORT).show();
+            }
+        });
+
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
@@ -93,11 +121,26 @@ public class MusicPlayerActivity extends AppCompatActivity {
         });
     }
 
+    private void updateFavButton() {
+        if (currentMediaId == null) return;
+        boolean isFav = AudioPreferences.isFav(this, currentMediaId);
+        if (isFav) {
+            btnFav.setImageResource(R.drawable.ic_heart_filled);
+            btnFav.setColorFilter(getColor(R.color.red));
+        } else {
+            btnFav.setImageResource(R.drawable.ic_heart_outline);
+            btnFav.setColorFilter(getColor(R.color.text_secondary));
+        }
+    }
+
     @Override
     protected void onStart() {
         super.onStart();
         PlaybackManager.getInstance().connect(this);
         PlaybackManager.getInstance().addListener(playbackListener);
+        // Initialize current media ID and update fav button
+        currentMediaId = PlaybackManager.getInstance().getCurrentMediaId();
+        updateFavButton();
     }
 
     @Override
