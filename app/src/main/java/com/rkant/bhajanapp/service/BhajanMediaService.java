@@ -50,35 +50,27 @@ public class BhajanMediaService extends MediaSessionService {
         exoPlayer.setHandleAudioBecomingNoisy(true);
         exoPlayer.setWakeMode(C.WAKE_MODE_NETWORK);
 
-        // FIX: Wrap ExoPlayer to FORCE Next/Previous buttons to always show in the notification
+        // Force Next/Previous buttons in notification
         player = new ForwardingPlayer(exoPlayer) {
             @Override
             public boolean isCommandAvailable(@Player.Command int command) {
-                if (command == Player.COMMAND_SEEK_TO_NEXT ||
-                        command == Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM ||
-                        command == Player.COMMAND_SEEK_TO_PREVIOUS ||
-                        command == Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM) {
-                    return true; // Always tell the OS these buttons are available
+                if (command == Player.COMMAND_SEEK_TO_NEXT || command == Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM ||
+                        command == Player.COMMAND_SEEK_TO_PREVIOUS || command == Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM) {
+                    return true;
                 }
                 return super.isCommandAvailable(command);
             }
 
             @Override
             public void seekToNext() {
-                if (exoPlayer.hasNextMediaItem()) {
-                    exoPlayer.seekToNext();
-                } else if (exoPlayer.getMediaItemCount() > 0) {
-                    exoPlayer.seekTo(0, 0); // Loop back to the first track
-                }
+                if (exoPlayer.hasNextMediaItem()) exoPlayer.seekToNext();
+                else if (exoPlayer.getMediaItemCount() > 0) exoPlayer.seekTo(0, 0);
             }
 
             @Override
             public void seekToPrevious() {
-                if (exoPlayer.hasPreviousMediaItem()) {
-                    exoPlayer.seekToPrevious();
-                } else if (exoPlayer.getMediaItemCount() > 0) {
-                    exoPlayer.seekTo(exoPlayer.getMediaItemCount() - 1, 0); // Loop to the last track
-                }
+                if (exoPlayer.hasPreviousMediaItem()) exoPlayer.seekToPrevious();
+                else if (exoPlayer.getMediaItemCount() > 0) exoPlayer.seekTo(exoPlayer.getMediaItemCount() - 1, 0);
             }
         };
 
@@ -86,10 +78,7 @@ public class BhajanMediaService extends MediaSessionService {
         PendingIntent pi = PendingIntent.getActivity(this, 0, openIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-        // Pass the wrapped 'player' to the MediaSession
-        session = new MediaSession.Builder(this, player)
-                .setSessionActivity(pi)
-                .build();
+        session = new MediaSession.Builder(this, player).setSessionActivity(pi).build();
 
         DefaultMediaNotificationProvider provider = new DefaultMediaNotificationProvider.Builder(this).build();
         provider.setSmallIcon(R.drawable.ic_music_note);
@@ -108,57 +97,65 @@ public class BhajanMediaService extends MediaSessionService {
             return caps != null
                     && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                     && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    private void enterWaitingForNetworkMode() {
-        if (waitingForNetwork) return;
-        if (exoPlayer == null || exoPlayer.getCurrentMediaItem() == null) return;
-        waitingForNetwork = true;
-        resumePosition = exoPlayer.getCurrentPosition();
-        resumeItem = exoPlayer.getCurrentMediaItem();
+        } catch (Exception e) { return false; }
     }
 
     private void resumePlayback() {
-        if (!waitingForNetwork) return;
+        if (resumeItem == null) { waitingForNetwork = false; return; }
+
+        // If it recovered on its own, do nothing
         if (exoPlayer.isPlaying() || exoPlayer.getPlaybackState() == Player.STATE_BUFFERING) {
-            waitingForNetwork = false;
-            return;
+            waitingForNetwork = false; resumeItem = null; resumePosition = C.TIME_UNSET; return;
         }
-        if (resumeItem == null) return;
 
         waitingForNetwork = false;
         exoPlayer.setMediaItem(resumeItem);
         exoPlayer.prepare();
         if (resumePosition != C.TIME_UNSET && resumePosition > 0) exoPlayer.seekTo(resumePosition);
         exoPlayer.play();
+
+        resumeItem = null;
+        resumePosition = C.TIME_UNSET;
     }
 
     private void setupPlayerListeners() {
         exoPlayer.addListener(new Player.Listener() {
             @Override
             public void onPlayerError(@NonNull PlaybackException error) {
-                if (!isNetworkAvailable()) enterWaitingForNetworkMode();
+                // FIX: Save position ONLY when the player actually fails, not when WiFi drops
+                if (exoPlayer.getCurrentMediaItem() != null && exoPlayer.getPlayWhenReady()) {
+                    resumeItem = exoPlayer.getCurrentMediaItem();
+                    resumePosition = exoPlayer.getCurrentPosition();
+                    waitingForNetwork = !isNetworkAvailable();
+                }
             }
 
             @Override
             public void onPlaybackStateChanged(int state) {
                 if (state == Player.STATE_IDLE) {
-                    if (!isNetworkAvailable() && exoPlayer.getPlayWhenReady()) {
-                        enterWaitingForNetworkMode();
+                    // FIX: If buffer runs out and it goes idle, save the exact stopping point
+                    if (exoPlayer.getCurrentMediaItem() != null && !isNetworkAvailable() && exoPlayer.getPlayWhenReady()) {
+                        resumeItem = exoPlayer.getCurrentMediaItem();
+                        resumePosition = exoPlayer.getCurrentPosition();
+                        waitingForNetwork = true;
                     }
+                } else if (state == Player.STATE_READY || state == Player.STATE_BUFFERING) {
+                    if (waitingForNetwork && isNetworkAvailable()) {
+                        waitingForNetwork = false; resumeItem = null; resumePosition = C.TIME_UNSET;
+                    }
+                } else if (state == Player.STATE_ENDED) {
+                    waitingForNetwork = false; resumeItem = null;
                 }
             }
 
             @Override
             public void onIsPlayingChanged(boolean isPlaying) {
-                if (isPlaying) {
-                    waitingForNetwork = false;
-                    resumeItem = null;
-                    resumePosition = C.TIME_UNSET;
-                }
+                if (isPlaying) { waitingForNetwork = false; resumeItem = null; resumePosition = C.TIME_UNSET; }
+            }
+
+            @Override
+            public void onMediaItemTransition(MediaItem mediaItem, int reason) {
+                waitingForNetwork = false; resumeItem = null; // User skipped track
             }
         });
     }
@@ -167,22 +164,20 @@ public class BhajanMediaService extends MediaSessionService {
         networkCallback = new ConnectivityManager.NetworkCallback() {
             @Override
             public void onAvailable(@NonNull Network network) {
-                mainHandler.post(() -> resumePlayback());
+                mainHandler.post(() -> {
+                    if (waitingForNetwork && exoPlayer.getPlayWhenReady()) resumePlayback();
+                });
             }
 
             @Override
             public void onLost(@NonNull Network network) {
-                mainHandler.post(() -> {
-                    if (exoPlayer != null && (exoPlayer.isPlaying() || exoPlayer.getPlayWhenReady())) {
-                        enterWaitingForNetworkMode();
-                    }
-                });
+                // FIX: DO NOT save position here. Let the player use its buffer.
+                // The Player.Listener above will catch the exact moment it runs out.
             }
         };
 
         NetworkRequest req = new NetworkRequest.Builder()
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                .build();
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).build();
         connectivityManager.registerNetworkCallback(req, networkCallback);
     }
 
@@ -192,10 +187,7 @@ public class BhajanMediaService extends MediaSessionService {
         super.onUpdateNotification(session, keepForeground);
     }
 
-    @Override
-    public MediaSession onGetSession(MediaSession.ControllerInfo controllerInfo) {
-        return session;
-    }
+    @Override public MediaSession onGetSession(MediaSession.ControllerInfo controllerInfo) { return session; }
 
     @Override
     public void onTaskRemoved(Intent rootIntent) {
@@ -207,8 +199,7 @@ public class BhajanMediaService extends MediaSessionService {
     @Override
     public void onDestroy() {
         if (connectivityManager != null && networkCallback != null) {
-            try { connectivityManager.unregisterNetworkCallback(networkCallback); }
-            catch (Exception ignored) {}
+            try { connectivityManager.unregisterNetworkCallback(networkCallback); } catch (Exception ignored) {}
         }
         if (session != null) session.release();
         if (exoPlayer != null) exoPlayer.release();
