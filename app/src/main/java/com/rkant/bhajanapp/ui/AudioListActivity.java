@@ -7,14 +7,21 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -26,7 +33,7 @@ import com.google.android.material.tabs.TabLayout;
 import com.rkant.bhajanapp.R;
 import com.rkant.bhajanapp.adapter.AudioAdapter;
 import com.rkant.bhajanapp.model.AudioTrack;
-import com.rkant.bhajanapp.utils.AudioPreferences;
+import com.rkant.bhajanapp.utils.AudioDatabase;
 import com.rkant.bhajanapp.utils.AudioRepository;
 import com.rkant.bhajanapp.utils.BatteryHelper;
 import com.rkant.bhajanapp.utils.DownloadHelper;
@@ -45,12 +52,18 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
     private final List<AudioTrack> allTracks = new ArrayList<>();
     private final List<AudioTrack> displayedTracks = new ArrayList<>();
     private SwipeRefreshLayout swipeRefresh;
-    private int currentTab = 0; // 0 = All, 1 = Favourites, 2 = Downloads
+    private int currentTab = 0;
+    private boolean isSyncing = false;
 
     private View miniPlayer;
     private TextView miniTitle;
     private ProgressBar miniProgress;
     private ImageView miniPlay;
+
+    // Network monitoring for auto-refresh
+    private ConnectivityManager connectivityManager;
+    private ConnectivityManager.NetworkCallback networkCallback;
+    private boolean wasOffline = false;
 
     private final PlaybackManager.Listener playbackListener = new PlaybackManager.Listener() {
         @Override
@@ -61,7 +74,7 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
 
         @Override
         public void onProgress(long position, long duration) {
-            if (miniPlayer.getVisibility() == View.VISIBLE && duration > 0) {
+            if (miniPlayer != null && miniPlayer.getVisibility() == View.VISIBLE && duration > 0) {
                 miniProgress.setMax((int) duration);
                 miniProgress.setProgress((int) position);
             }
@@ -78,11 +91,14 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
 
             for (AudioTrack t : allTracks) {
                 if (t.id.equals(trackId)) {
-                    if (DownloadHelper.isDownloaded(AudioListActivity.this, trackId)) {
-                        File f = DownloadHelper.getLocalFile(AudioListActivity.this, trackId);
+                    File f = DownloadHelper.getLocalFile(AudioListActivity.this, trackId);
+                    if (f != null && f.exists()) {
                         t.isDownloaded = true;
                         t.downloadState = AudioTrack.STATE_DOWNLOADED;
-                        if (f != null) t.localPath = f.getAbsolutePath();
+                        t.localPath = f.getAbsolutePath();
+                        // Persist to database
+                        AudioDatabase.getInstance(AudioListActivity.this)
+                                .markDownloaded(trackId, f.getAbsolutePath());
                         Toast.makeText(AudioListActivity.this, "Downloaded: " + t.title, Toast.LENGTH_SHORT).show();
                     } else {
                         t.downloadState = AudioTrack.STATE_NOT_DOWNLOADED;
@@ -116,17 +132,61 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
 
         setupTabs();
         setupMiniPlayer();
+        setupNetworkMonitor();
+
+        // Load from database first (instant, works offline)
         loadAudios();
 
         IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
         ContextCompat.registerReceiver(this, downloadReceiver, filter, ContextCompat.RECEIVER_EXPORTED);
     }
 
+    /**
+     * Monitor network changes - auto-refresh when internet comes back
+     */
+    private void setupNetworkMonitor() {
+        connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        networkCallback = new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onAvailable(@NonNull Network network) {
+                // Internet just became available
+                if (wasOffline) {
+                    wasOffline = false;
+                    // Auto-sync after a short delay to ensure connection is stable
+                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                        if (!isFinishing() && !isSyncing) {
+                            syncFromNetwork();
+                        }
+                    }, 1000);
+                }
+            }
+
+            @Override
+            public void onLost(@NonNull Network network) {
+                wasOffline = true;
+            }
+        };
+
+        NetworkRequest request = new NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .build();
+
+        try {
+            connectivityManager.registerNetworkCallback(request, networkCallback);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // Set initial state
+        wasOffline = !AudioRepository.isNetworkAvailable(this);
+    }
+
     private void setupTabs() {
         TabLayout tabs = findViewById(R.id.audio_tabs);
         tabs.addTab(tabs.newTab().setText("All"));
         tabs.addTab(tabs.newTab().setText("Favourites"));
-        tabs.addTab(tabs.newTab().setText("Downloads")); // NEW DOWNLOADS TAB
+        tabs.addTab(tabs.newTab().setText("Downloads"));
         tabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
@@ -142,6 +202,9 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
     protected void onDestroy() {
         super.onDestroy();
         try { unregisterReceiver(downloadReceiver); } catch (Exception ignored) {}
+        if (connectivityManager != null && networkCallback != null) {
+            try { connectivityManager.unregisterNetworkCallback(networkCallback); } catch (Exception ignored) {}
+        }
     }
 
     private void requestNotificationPermission() {
@@ -192,26 +255,25 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
         miniPlay.setImageResource(isPlaying ? R.drawable.ic_pause : R.drawable.ic_play_arrow);
     }
 
+    /**
+     * Load tracks from database first, then sync from network if available
+     */
     private void loadAudios() {
         swipeRefresh.setRefreshing(true);
-        AudioRepository.loadTracks(new AudioRepository.Callback() {
+        isSyncing = true;
+
+        AudioRepository.loadTracks(this, new AudioRepository.LoadCallback() {
             @Override
-            public void onLoaded(List<AudioTrack> loaded) {
+            public void onTracksLoaded(List<AudioTrack> tracks, boolean fromNetwork) {
                 runOnUiThread(() -> {
-                    for (AudioTrack t : loaded) {
-                        if (DownloadHelper.isDownloaded(AudioListActivity.this, t.id)) {
-                            File f = DownloadHelper.getLocalFile(AudioListActivity.this, t.id);
-                            t.isDownloaded = true;
-                            t.downloadState = AudioTrack.STATE_DOWNLOADED;
-                            if (f != null) t.localPath = f.getAbsolutePath();
-                        }
-                    }
                     allTracks.clear();
-                    allTracks.addAll(loaded);
+                    allTracks.addAll(tracks);
                     refreshDisplayedList();
-                    swipeRefresh.setRefreshing(false);
-                    if (allTracks.isEmpty())
-                        Toast.makeText(AudioListActivity.this, "No audio found", Toast.LENGTH_SHORT).show();
+
+                    if (fromNetwork) {
+                        swipeRefresh.setRefreshing(false);
+                        isSyncing = false;
+                    }
                 });
             }
 
@@ -219,7 +281,34 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
             public void onError(String message) {
                 runOnUiThread(() -> {
                     swipeRefresh.setRefreshing(false);
-                    Toast.makeText(AudioListActivity.this, "Failed to load audio list", Toast.LENGTH_SHORT).show();
+                    isSyncing = false;
+                    Toast.makeText(AudioListActivity.this, message, Toast.LENGTH_SHORT).show();
+                });
+            }
+        });
+    }
+
+    /**
+     * Sync only from network (called when internet reconnects)
+     */
+    private void syncFromNetwork() {
+        isSyncing = true;
+        AudioRepository.syncFromNetwork(this, new AudioRepository.LoadCallback() {
+            @Override
+            public void onTracksLoaded(List<AudioTrack> tracks, boolean fromNetwork) {
+                runOnUiThread(() -> {
+                    allTracks.clear();
+                    allTracks.addAll(tracks);
+                    refreshDisplayedList();
+                    isSyncing = false;
+                    Toast.makeText(AudioListActivity.this, "Audio list updated", Toast.LENGTH_SHORT).show();
+                });
+            }
+
+            @Override
+            public void onError(String message) {
+                runOnUiThread(() -> {
+                    isSyncing = false;
                 });
             }
         });
@@ -228,17 +317,14 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
     private void refreshDisplayedList() {
         displayedTracks.clear();
         if (currentTab == 0) {
-            // All tracks
             displayedTracks.addAll(allTracks);
         } else if (currentTab == 1) {
-            // Favourites only
             for (AudioTrack t : allTracks) {
-                if (AudioPreferences.isFav(this, t.id)) {
+                if (t.isFavourite) {
                     displayedTracks.add(t);
                 }
             }
         } else if (currentTab == 2) {
-            // Downloads only
             for (AudioTrack t : allTracks) {
                 if (t.isDownloaded) {
                     displayedTracks.add(t);
@@ -248,6 +334,7 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
         adapter.notifyDataSetChanged();
     }
 
+    // ----- AudioAdapter.OnTrackAction -----
     @Override
     public void onPlayClick(AudioTrack track, int position) {
         PlaybackManager pm = PlaybackManager.getInstance();
@@ -265,11 +352,10 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
     @Override
     public void onDownloadClick(AudioTrack track) {
         if (track.isDownloaded) {
-            // CONFIRMATION DIALOG FOR DELETING DOWNLOADS
             Helper.showConfirm(this, "Delete Download",
                     "Are you sure you want to delete \"" + track.title + "\" from your device?", "Delete", true, () -> {
 
-                        // Safety: Stop playback if the deleted track is currently playing
+                        // Stop playback if this track is currently playing
                         PlaybackManager pm = PlaybackManager.getInstance();
                         if (track.id.equals(pm.getCurrentMediaId())) {
                             pm.stopAndClear();
@@ -279,6 +365,10 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
                         track.isDownloaded = false;
                         track.localPath = null;
                         track.downloadState = AudioTrack.STATE_NOT_DOWNLOADED;
+
+                        // Update database
+                        AudioDatabase.getInstance(this).markNotDownloaded(track.id);
+
                         refreshDisplayedList();
                         Toast.makeText(this, "Download deleted", Toast.LENGTH_SHORT).show();
                     });
@@ -296,18 +386,19 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
 
     @Override
     public void onFavClick(AudioTrack track) {
-        boolean isCurrentlyFav = AudioPreferences.isFav(this, track.id);
-        if (isCurrentlyFav) {
-            // CONFIRMATION DIALOG FOR REMOVING FAVOURITES
+        if (track.isFavourite) {
             Helper.showConfirm(this, "Remove from Favourites",
                     "Remove \"" + track.title + "\" from your favourites list?", "Remove", true, () -> {
-                        AudioPreferences.toggleFav(this, track.id);
+                        track.isFavourite = false;
+                        // Update database
+                        AudioDatabase.getInstance(this).toggleFavourite(track.id);
                         refreshDisplayedList();
                         Toast.makeText(this, "Removed from favourites", Toast.LENGTH_SHORT).show();
                     });
         } else {
-            // Just add it, no confirmation needed
-            AudioPreferences.toggleFav(this, track.id);
+            track.isFavourite = true;
+            // Update database
+            AudioDatabase.getInstance(this).toggleFavourite(track.id);
             refreshDisplayedList();
             Toast.makeText(this, "Added to favourites", Toast.LENGTH_SHORT).show();
         }

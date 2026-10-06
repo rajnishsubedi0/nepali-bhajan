@@ -12,8 +12,9 @@ import androidx.media3.common.C;
 import androidx.media3.common.Player;
 
 import com.rkant.bhajanapp.R;
+import com.rkant.bhajanapp.model.AudioTrack;
 import com.rkant.bhajanapp.service.BhajanMediaService;
-import com.rkant.bhajanapp.utils.AudioPreferences;
+import com.rkant.bhajanapp.utils.AudioDatabase;
 import com.rkant.bhajanapp.utils.Helper;
 import com.rkant.bhajanapp.utils.PlaybackManager;
 
@@ -32,7 +33,6 @@ public class MusicPlayerActivity extends AppCompatActivity {
             if (title != null && !title.isEmpty()) tvTitle.setText(title);
             btnPlayPause.setImageResource(isPlaying ? R.drawable.ic_pause : R.drawable.ic_play_arrow);
 
-            // Update favourite button when track changes
             if (mediaId != null && !mediaId.equals(currentMediaId)) {
                 currentMediaId = mediaId;
                 updateFavButton();
@@ -91,20 +91,21 @@ public class MusicPlayerActivity extends AppCompatActivity {
         btnShuffle.setOnClickListener(v -> PlaybackManager.getInstance().toggleShuffle());
         btnRepeat.setOnClickListener(v -> PlaybackManager.getInstance().cycleRepeat());
 
-        // Favourite button click handler
         btnFav.setOnClickListener(v -> {
             if (currentMediaId == null) return;
 
-            boolean isCurrentlyFav = AudioPreferences.isFav(this, currentMediaId);
+            AudioDatabase db = AudioDatabase.getInstance(this);
+            boolean isCurrentlyFav = db.isFavourite(currentMediaId);
+
             if (isCurrentlyFav) {
                 Helper.showConfirm(this, "Remove from Favourites",
                         "Remove this bhajan from your favourites list?", "Remove", true, () -> {
-                            AudioPreferences.toggleFav(this, currentMediaId);
+                            db.toggleFavourite(currentMediaId);
                             updateFavButton();
                             Toast.makeText(this, "Removed from favourites", Toast.LENGTH_SHORT).show();
                         });
             } else {
-                AudioPreferences.toggleFav(this, currentMediaId);
+                db.toggleFavourite(currentMediaId);
                 updateFavButton();
                 Toast.makeText(this, "Added to favourites", Toast.LENGTH_SHORT).show();
             }
@@ -123,7 +124,7 @@ public class MusicPlayerActivity extends AppCompatActivity {
 
     private void updateFavButton() {
         if (currentMediaId == null) return;
-        boolean isFav = AudioPreferences.isFav(this, currentMediaId);
+        boolean isFav = AudioDatabase.getInstance(this).isFavourite(currentMediaId);
         if (isFav) {
             btnFav.setImageResource(R.drawable.ic_heart_filled);
             btnFav.setColorFilter(getColor(R.color.red));
@@ -138,7 +139,6 @@ public class MusicPlayerActivity extends AppCompatActivity {
         super.onStart();
         PlaybackManager.getInstance().connect(this);
         PlaybackManager.getInstance().addListener(playbackListener);
-        // Initialize current media ID and update fav button
         currentMediaId = PlaybackManager.getInstance().getCurrentMediaId();
         updateFavButton();
     }

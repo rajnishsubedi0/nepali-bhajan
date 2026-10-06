@@ -12,7 +12,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.rkant.bhajanapp.R;
 import com.rkant.bhajanapp.model.AudioTrack;
-import com.rkant.bhajanapp.utils.AudioPreferences;
 import com.rkant.bhajanapp.utils.Helper;
 
 import java.util.List;
@@ -57,10 +56,9 @@ public class AudioAdapter extends RecyclerView.Adapter<AudioAdapter.VH> {
         if (t.durationSec > 0) h.duration.setText(Helper.formatTime(t.durationSec * 1000L));
         else h.duration.setText("--:--");
 
-        // Favourite state - ALWAYS VISIBLE, just change icon/color
-        boolean isFav = AudioPreferences.isFav(ctx, t.id);
+        // Favourite state from track object (persisted in database)
         h.fav.setVisibility(View.VISIBLE);
-        if (isFav) {
+        if (t.isFavourite) {
             h.fav.setImageResource(R.drawable.ic_heart_filled);
             h.fav.setColorFilter(ctx.getColor(R.color.red));
         } else {
