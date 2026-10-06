@@ -153,8 +153,19 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
     // ----- AudioAdapter.OnTrackAction -----
     @Override
     public void onPlayClick(AudioTrack track, int position) {
-        PlaybackManager.getInstance().connect(this);
-        PlaybackManager.getInstance().playList(tracks, position);
+        PlaybackManager pm = PlaybackManager.getInstance();
+        pm.connect(this);
+
+        // FIX: Check if the tapped track is already the currently loaded track
+        String currentId = pm.getCurrentMediaId();
+        if (track.id != null && track.id.equals(currentId)) {
+            // It's already loaded/playing. Just open the UI without resetting the position.
+            startActivity(new Intent(this, MusicPlayerActivity.class));
+            return;
+        }
+
+        // It's a different track. Load the new playlist and start playing.
+        pm.playList(tracks, position);
         startActivity(new Intent(this, MusicPlayerActivity.class));
     }
 
