@@ -13,6 +13,7 @@ import android.os.Looper;
 import androidx.annotation.NonNull;
 import androidx.media3.common.AudioAttributes;
 import androidx.media3.common.C;
+import androidx.media3.common.ForwardingPlayer;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
@@ -26,7 +27,8 @@ import com.rkant.bhajanapp.ui.MusicPlayerActivity;
 
 public class BhajanMediaService extends MediaSessionService {
 
-    private ExoPlayer player;
+    private ExoPlayer exoPlayer;
+    private ForwardingPlayer player;
     private MediaSession session;
     private ConnectivityManager connectivityManager;
     private ConnectivityManager.NetworkCallback networkCallback;
@@ -41,18 +43,53 @@ public class BhajanMediaService extends MediaSessionService {
         super.onCreate();
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
-        player = new ExoPlayer.Builder(this).build();
-        player.setAudioAttributes(new AudioAttributes.Builder()
+        exoPlayer = new ExoPlayer.Builder(this).build();
+        exoPlayer.setAudioAttributes(new AudioAttributes.Builder()
                 .setUsage(C.USAGE_MEDIA)
                 .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(), true);
-        player.setHandleAudioBecomingNoisy(true);
-        player.setWakeMode(C.WAKE_MODE_NETWORK); // keep CPU + network awake while playing
+        exoPlayer.setHandleAudioBecomingNoisy(true);
+        exoPlayer.setWakeMode(C.WAKE_MODE_NETWORK);
+
+        // FIX: Wrap ExoPlayer to FORCE Next/Previous buttons to always show in the notification
+        player = new ForwardingPlayer(exoPlayer) {
+            @Override
+            public boolean isCommandAvailable(@Player.Command int command) {
+                if (command == Player.COMMAND_SEEK_TO_NEXT ||
+                        command == Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM ||
+                        command == Player.COMMAND_SEEK_TO_PREVIOUS ||
+                        command == Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM) {
+                    return true; // Always tell the OS these buttons are available
+                }
+                return super.isCommandAvailable(command);
+            }
+
+            @Override
+            public void seekToNext() {
+                if (exoPlayer.hasNextMediaItem()) {
+                    exoPlayer.seekToNext();
+                } else if (exoPlayer.getMediaItemCount() > 0) {
+                    exoPlayer.seekTo(0, 0); // Loop back to the first track
+                }
+            }
+
+            @Override
+            public void seekToPrevious() {
+                if (exoPlayer.hasPreviousMediaItem()) {
+                    exoPlayer.seekToPrevious();
+                } else if (exoPlayer.getMediaItemCount() > 0) {
+                    exoPlayer.seekTo(exoPlayer.getMediaItemCount() - 1, 0); // Loop to the last track
+                }
+            }
+        };
 
         Intent openIntent = new Intent(this, MusicPlayerActivity.class);
         PendingIntent pi = PendingIntent.getActivity(this, 0, openIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-        session = new MediaSession.Builder(this, player).setSessionActivity(pi).build();
+        // Pass the wrapped 'player' to the MediaSession
+        session = new MediaSession.Builder(this, player)
+                .setSessionActivity(pi)
+                .build();
 
         DefaultMediaNotificationProvider provider = new DefaultMediaNotificationProvider.Builder(this).build();
         provider.setSmallIcon(R.drawable.ic_music_note);
@@ -60,7 +97,6 @@ public class BhajanMediaService extends MediaSessionService {
 
         setupPlayerListeners();
         setupNetworkMonitor();
-        player.setWakeMode(C.WAKE_MODE_NETWORK);
     }
 
     private boolean isNetworkAvailable() {
@@ -77,55 +113,48 @@ public class BhajanMediaService extends MediaSessionService {
         }
     }
 
-    /** Saves the current track + position and marks that we are waiting for internet. */
     private void enterWaitingForNetworkMode() {
         if (waitingForNetwork) return;
-        if (player == null || player.getCurrentMediaItem() == null) return;
+        if (exoPlayer == null || exoPlayer.getCurrentMediaItem() == null) return;
         waitingForNetwork = true;
-        resumePosition = player.getCurrentPosition();
-        resumeItem = player.getCurrentMediaItem();
+        resumePosition = exoPlayer.getCurrentPosition();
+        resumeItem = exoPlayer.getCurrentMediaItem();
     }
 
-    /** Called when internet comes back. Restarts the saved track from where it stopped. */
     private void resumePlayback() {
         if (!waitingForNetwork) return;
-        // If ExoPlayer already recovered on its own, do nothing.
-        if (player.isPlaying() || player.getPlaybackState() == Player.STATE_BUFFERING) {
+        if (exoPlayer.isPlaying() || exoPlayer.getPlaybackState() == Player.STATE_BUFFERING) {
             waitingForNetwork = false;
             return;
         }
         if (resumeItem == null) return;
 
         waitingForNetwork = false;
-        player.setMediaItem(resumeItem);
-        player.prepare();
-        if (resumePosition != C.TIME_UNSET && resumePosition > 0) player.seekTo(resumePosition);
-        player.play();
+        exoPlayer.setMediaItem(resumeItem);
+        exoPlayer.prepare();
+        if (resumePosition != C.TIME_UNSET && resumePosition > 0) exoPlayer.seekTo(resumePosition);
+        exoPlayer.play();
     }
 
     private void setupPlayerListeners() {
-        player.addListener(new Player.Listener() {
+        exoPlayer.addListener(new Player.Listener() {
             @Override
             public void onPlayerError(@NonNull PlaybackException error) {
-                // Playback failed. If there is no internet, wait for it to return.
                 if (!isNetworkAvailable()) enterWaitingForNetworkMode();
             }
 
             @Override
             public void onPlaybackStateChanged(int state) {
                 if (state == Player.STATE_IDLE) {
-                    if (!isNetworkAvailable() && player.getPlayWhenReady()) {
+                    if (!isNetworkAvailable() && exoPlayer.getPlayWhenReady()) {
                         enterWaitingForNetworkMode();
                     }
-                    // NOTE: We intentionally do NOT call stopSelf() here.
-                    // That was the old bug that killed the notification.
                 }
             }
 
             @Override
             public void onIsPlayingChanged(boolean isPlaying) {
                 if (isPlaying) {
-                    // Playback is healthy again; clear the saved resume state.
                     waitingForNetwork = false;
                     resumeItem = null;
                     resumePosition = C.TIME_UNSET;
@@ -144,7 +173,7 @@ public class BhajanMediaService extends MediaSessionService {
             @Override
             public void onLost(@NonNull Network network) {
                 mainHandler.post(() -> {
-                    if (player != null && (player.isPlaying() || player.getPlayWhenReady())) {
+                    if (exoPlayer != null && (exoPlayer.isPlaying() || exoPlayer.getPlayWhenReady())) {
                         enterWaitingForNetworkMode();
                     }
                 });
@@ -157,13 +186,9 @@ public class BhajanMediaService extends MediaSessionService {
         connectivityManager.registerNetworkCallback(req, networkCallback);
     }
 
-    /**
-     * Keeps the notification/foreground alive while we are waiting for the network,
-     * so the system does not remove it.
-     */
     @Override
     public void onUpdateNotification(MediaSession session, boolean startInForegroundRequired) {
-        boolean keepForeground = startInForegroundRequired || waitingForNetwork || player.isPlaying();
+        boolean keepForeground = startInForegroundRequired || waitingForNetwork || exoPlayer.isPlaying();
         super.onUpdateNotification(session, keepForeground);
     }
 
@@ -174,8 +199,7 @@ public class BhajanMediaService extends MediaSessionService {
 
     @Override
     public void onTaskRemoved(Intent rootIntent) {
-        Player p = session.getPlayer();
-        boolean active = waitingForNetwork || (p != null && p.getPlayWhenReady() && p.getMediaItemCount() > 0);
+        boolean active = waitingForNetwork || (exoPlayer != null && exoPlayer.getPlayWhenReady() && exoPlayer.getMediaItemCount() > 0);
         if (!active) stopSelf();
         super.onTaskRemoved(rootIntent);
     }
@@ -187,7 +211,7 @@ public class BhajanMediaService extends MediaSessionService {
             catch (Exception ignored) {}
         }
         if (session != null) session.release();
-        if (player != null) player.release();
+        if (exoPlayer != null) exoPlayer.release();
         super.onDestroy();
     }
 }
