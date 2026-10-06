@@ -151,4 +151,13 @@ public class Helper {
         confirm.setOnClickListener(v -> { d.dismiss(); onConfirm.run(); });
         d.show();
     }
+
+    public static String formatTime(long ms) {
+        if (ms <= 0 || ms == androidx.media3.common.C.TIME_UNSET) return "--:--";
+        long seconds = (ms / 1000) % 60;
+        long minutes = (ms / (1000 * 60)) % 60;
+        long hours = ms / (1000 * 60 * 60);
+        if (hours > 0) return String.format("%d:%02d:%02d", hours, minutes, seconds);
+        return String.format("%02d:%02d", minutes, seconds);
+    }
 }

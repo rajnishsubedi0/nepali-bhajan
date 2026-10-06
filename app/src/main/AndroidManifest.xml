@@ -1,7 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:allowBackup="true"
         android:icon="@drawable/shiva_colorized"
@@ -9,14 +16,28 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.BhajanApp"
         tools:targetApi="31">
+
         <activity android:name=".ui.MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
         <activity android:name=".ui.DetailActivity" />
         <activity android:name=".ui.SettingsActivity" />
+        <activity android:name=".ui.AudioListActivity" />
+        <activity android:name=".ui.MusicPlayerActivity" />
+
+        <service
+            android:name=".service.BhajanMediaService"
+            android:foregroundServiceType="mediaPlayback"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="androidx.media3.session.MediaSessionService" />
+            </intent-filter>
+        </service>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

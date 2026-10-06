@@ -1,5 +1,7 @@
 package com.rkant.bhajanapp.ui;
 
+import android.animation.ObjectAnimator;
+import android.animation.PropertyValuesHolder;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
@@ -11,25 +13,31 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.google.android.material.tabs.TabLayout;
 import com.rkant.bhajanapp.R;
 import com.rkant.bhajanapp.adapter.BhajanAdapter;
 import com.rkant.bhajanapp.adapter.CategoryAdapter;
 import com.rkant.bhajanapp.model.Bhajan;
 import com.rkant.bhajanapp.utils.Helper;
+import com.rkant.bhajanapp.utils.PlaybackManager;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
+
     private BhajanAdapter adapter;
     private RecyclerView rvCategories;
     private List<Bhajan> all = new ArrayList<>();
@@ -44,6 +52,34 @@ public class MainActivity extends AppCompatActivity {
     private EditText etSearch;
     private TextView tvCount, tvFavCount;
 
+    // Audio player button + animation
+    private View btnAudio;
+    private ObjectAnimator pulseAnim;
+
+    private final PlaybackManager.Listener playbackListener = new PlaybackManager.Listener() {
+        @Override
+        public void onStateChanged(boolean isPlaying, String title, String mediaId) {
+            if (btnAudio == null) return;
+            if (isPlaying) {
+                if (pulseAnim == null) {
+                    pulseAnim = ObjectAnimator.ofPropertyValuesHolder(btnAudio,
+                            PropertyValuesHolder.ofFloat("scaleX", 1f, 1.2f, 1f),
+                            PropertyValuesHolder.ofFloat("scaleY", 1f, 1.2f, 1f));
+                    pulseAnim.setDuration(1000);
+                    pulseAnim.setRepeatCount(ObjectAnimator.INFINITE);
+                }
+                pulseAnim.start();
+            } else {
+                if (pulseAnim != null) pulseAnim.cancel();
+                btnAudio.setScaleX(1f);
+                btnAudio.setScaleY(1f);
+            }
+        }
+
+        @Override
+        public void onProgress(long position, long duration) { /* not needed here */ }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         Helper.applyTheme(this);
@@ -57,14 +93,22 @@ public class MainActivity extends AppCompatActivity {
         tvCount = findViewById(R.id.tv_count);
         tvFavCount = findViewById(R.id.tv_fav_count);
         rvCategories = findViewById(R.id.rv_categories);
-        root.requestFocus(); // search never auto-focuses
+        root.requestFocus();
 
         RecyclerView rvList = findViewById(R.id.recyclerView);
         adapter = new BhajanAdapter(new ArrayList<>(), this);
         rvList.setLayoutManager(new LinearLayoutManager(this));
         rvList.setAdapter(adapter);
 
-        findViewById(R.id.btn_settings).setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
+        findViewById(R.id.btn_settings).setOnClickListener(v ->
+                startActivity(new Intent(this, SettingsActivity.class)));
+
+        // Audio player entry point
+        btnAudio = findViewById(R.id.btn_audio);
+        if (btnAudio != null) {
+            btnAudio.setOnClickListener(v ->
+                    startActivity(new Intent(this, AudioListActivity.class)));
+        }
 
         TabLayout tabs = findViewById(R.id.tabs);
         tabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
@@ -106,7 +150,9 @@ public class MainActivity extends AppCompatActivity {
             public void afterTextChanged(Editable s) {}
         });
 
-        etSearch.setOnFocusChangeListener((v, hasFocus) -> { if (hasFocus) searchFocusGainedAt = System.currentTimeMillis(); });
+        etSearch.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) searchFocusGainedAt = System.currentTimeMillis();
+        });
 
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
             if (!insets.isVisible(WindowInsetsCompat.Type.ime())) {
@@ -119,7 +165,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onResume() { super.onResume(); root.requestFocus(); refresh(); }
+    protected void onStart() {
+        super.onStart();
+        PlaybackManager.getInstance().connect(this);
+        PlaybackManager.getInstance().addListener(playbackListener);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        PlaybackManager.getInstance().removeListener(playbackListener);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        root.requestFocus();
+        refresh();
+    }
 
     private void dropFocusIfKeyboardHidden() {
         WindowInsetsCompat ins = ViewCompat.getRootWindowInsets(root);
@@ -142,7 +205,8 @@ public class MainActivity extends AppCompatActivity {
                 for (int i = 0; i < arr.length(); i++) {
                     JSONObject o = arr.getJSONObject(i);
                     temp.add(new Bhajan(Helper.getJson(o, "id"), Helper.getJson(o, "bhajan_nepali"),
-                            Helper.getJson(o, "bhajan_english"), Helper.getJson(o, "bhajan"), Helper.getJson(o, "bhajan_type")));
+                            Helper.getJson(o, "bhajan_english"), Helper.getJson(o, "bhajan"),
+                            Helper.getJson(o, "bhajan_type")));
                 }
                 all = Helper.sortNepali(temp);
                 runOnUiThread(this::refresh);
@@ -166,20 +230,20 @@ public class MainActivity extends AppCompatActivity {
                 for (Bhajan b : all) if (Helper.isFav(this, b.id)) base.add(b);
             }
         }
+
         List<Bhajan> out = new ArrayList<>();
         for (Bhajan b : base)
             if (q.isEmpty() || (b.titleNepali != null && b.titleNepali.toLowerCase().contains(q))
                     || (b.titleEnglish != null && b.titleEnglish.toLowerCase().contains(q))) out.add(b);
+
         adapter.update(out);
         tvCount.setText(out.size() + " bhajans");
         tvFavCount.setText(Helper.favCount(this) + " favourites");
-
         boolean showClear = (currentTab == 1 || currentTab == 2);
         btnClearAll.setVisibility(showClear ? View.VISIBLE : View.GONE);
         tvFavCount.setVisibility(showClear ? View.GONE : View.VISIBLE);
     }
 
-    // BACK: 1) close keyboard  2) clear search text  3) double-press exit (2s)
     @Override
     public void onBackPressed() {
         if (etSearch.hasFocus()) { hideKeyboard(); etSearch.clearFocus(); return; }

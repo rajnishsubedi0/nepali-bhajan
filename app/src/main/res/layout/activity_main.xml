@@ -56,6 +56,15 @@
                 android:tint="@color/text_secondary"
                 android:visibility="gone" />
         </LinearLayout>
+        <ImageView
+            android:id="@+id/btn_audio"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_marginStart="12dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:padding="9dp"
+            android:src="@drawable/ic_music_note"
+            android:tint="@color/accent" />
 
         <ImageView
             android:id="@+id/btn_settings"
