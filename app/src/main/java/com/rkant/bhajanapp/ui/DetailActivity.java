@@ -66,7 +66,7 @@ public class DetailActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // Re-apply lyric font size if it was changed in Settings
+
         if (lyricAdapter != null) lyricAdapter.notifyDataSetChanged();
     }
 

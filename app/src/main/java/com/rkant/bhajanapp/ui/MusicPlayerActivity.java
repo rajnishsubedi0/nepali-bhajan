@@ -24,7 +24,6 @@ public class MusicPlayerActivity extends AppCompatActivity {
     private SeekBar seekBar;
     private ImageView btnPlayPause, btnShuffle, btnRepeat, btnFav;
     private boolean isTracking = false;
-    private long currentDuration = C.TIME_UNSET;
     private String currentMediaId = null;
 
     private final PlaybackManager.Listener playbackListener = new PlaybackManager.Listener() {
@@ -41,7 +40,6 @@ public class MusicPlayerActivity extends AppCompatActivity {
 
         @Override
         public void onProgress(long position, long duration) {
-            currentDuration = duration;
             boolean seekable = duration > 0 && duration != C.TIME_UNSET;
             tvTotalTime.setText(Helper.formatTime(duration));
             seekBar.setEnabled(seekable);

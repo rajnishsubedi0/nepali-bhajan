@@ -28,7 +28,7 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
     @Override public void onBindViewHolder(@NonNull VH h, int pos) {
         Bhajan b = list.get(pos);
         h.number.setText(Helper.getNepaliNumber(pos + 1));
-        h.number.setTextSize(Helper.listNumberSize(ctx)); // number scales WITH the list font size
+        h.number.setTextSize(Helper.listNumberSize(ctx));
         h.title.setText(b.titleNepali);
         h.title.setTextSize(Helper.listTitleSize(ctx));
         h.sub.setText(b.type);

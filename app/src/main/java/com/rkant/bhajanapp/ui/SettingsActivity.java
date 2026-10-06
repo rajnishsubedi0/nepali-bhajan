@@ -56,8 +56,8 @@ public class SettingsActivity extends AppCompatActivity {
     private void update() {
         for (int i = 0; i < 3; i++) style(themeBtns[i], themeMode == i);
         for (int i = 0; i < timeoutBtns.length; i++) style(timeoutBtns[i], timeout == timeoutValues[i]);
-        tvListSize.setText(Helper.scaleName(listScale, false) + " (" + (int) Helper.scaleSp(listScale, false) + "sp)");
-        tvLyricSize.setText(Helper.scaleName(lyricScale, true) + " (" + (int) Helper.scaleSp(lyricScale, true) + "sp)");
+        tvListSize.setText(Helper.scaleName(listScale) + " (" + (int) Helper.scaleSp(listScale, false) + "sp)");
+        tvLyricSize.setText(Helper.scaleName(lyricScale) + " (" + (int) Helper.scaleSp(lyricScale, true) + "sp)");
     }
 
     private void style(TextView v, boolean selected) {

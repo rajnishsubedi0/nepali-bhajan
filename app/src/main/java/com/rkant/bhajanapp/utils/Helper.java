@@ -29,12 +29,11 @@ public class Helper {
     private static final String THEME = "theme_mode";
     private static final String TIMEOUT = "screen_timeout";
     public static final int MODE_SYSTEM = 0, MODE_LIGHT = 1, MODE_DARK = 2;
-    public static String scaleName(int scale, boolean lyric) { return SIZE_NAMES[clamp(scale)]; }
+    public static String scaleName(int scale) { return SIZE_NAMES[clamp(scale)]; }
     public static float scaleSp(int scale, boolean lyric) { return (lyric ? LYRIC_SIZES : LIST_SIZES)[clamp(scale)]; }
 
     private static SharedPreferences p(Context c) { return c.getSharedPreferences(PREFS, Context.MODE_PRIVATE); }
 
-    // --- Favorites ---
     public static boolean isFav(Context c, String id) {
         Set<String> f = p(c).getStringSet(FAVS, new HashSet<>());
         return f != null && f.contains(id);
@@ -69,11 +68,11 @@ public class Helper {
                 m == MODE_DARK ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
     }
 
-    // --- Screen timeout (minutes, -1 = always, default 3) ---
+
     public static int getScreenTimeout(Context c) { return p(c).getInt(TIMEOUT, 3); }
     public static void setScreenTimeout(Context c, int mins) { p(c).edit().putInt(TIMEOUT, mins).apply(); }
 
-    // --- INDIVIDUAL font sizes: list and lyric stored separately (0..4) ---
+
     private static final String FONT_LIST = "font_scale_list";
     private static final String FONT_LYRIC = "font_scale_lyric";
     private static final float[] LIST_SIZES  = {14f, 16f, 19f, 22f, 26f};
@@ -89,7 +88,6 @@ public class Helper {
     public static float listTitleSize(Context c) { return LIST_SIZES[getListFontScale(c)]; }
     public static float listNumberSize(Context c) { return NUM_SIZES[getListFontScale(c)]; }
     public static float lyricSize(Context c) { return LYRIC_SIZES[getLyricFontScale(c)]; }
-    public static String sizeName(Context c, boolean lyric) { return SIZE_NAMES[lyric ? getLyricFontScale(c) : getListFontScale(c)]; }
 
     // --- JSON ---
     public static String readRaw(Context c, int resId) {

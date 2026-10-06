@@ -51,10 +51,7 @@ public class AudioDatabase extends SQLiteOpenHelper {
         onCreate(db);
     }
 
-    /**
-     * Save/update tracks fetched from network.
-     * Preserves favourite and download state for existing tracks.
-     */
+
     public void saveTracks(List<AudioTrack> tracks) {
         SQLiteDatabase db = getWritableDatabase();
         db.beginTransaction();
@@ -91,7 +88,7 @@ public class AudioDatabase extends SQLiteOpenHelper {
         }
     }
 
-    /** Load all tracks from database, ordered by sort_order */
+
     public List<AudioTrack> getAllTracks() {
         List<AudioTrack> tracks = new ArrayList<>();
         SQLiteDatabase db = getReadableDatabase();
@@ -107,7 +104,6 @@ public class AudioDatabase extends SQLiteOpenHelper {
         return tracks;
     }
 
-    /** Get a single track by ID */
     public AudioTrack getTrackById(String id) {
         return getTrackByIdInternal(getReadableDatabase(), id);
     }
@@ -124,7 +120,6 @@ public class AudioDatabase extends SQLiteOpenHelper {
         return null;
     }
 
-    /** Toggle favourite status */
     public void toggleFavourite(String id) {
         AudioTrack track = getTrackById(id);
         if (track == null) return;
@@ -135,13 +130,12 @@ public class AudioDatabase extends SQLiteOpenHelper {
         db.update(TABLE, cv, "id = ?", new String[]{id});
     }
 
-    /** Check if track is favourite */
+
     public boolean isFavourite(String id) {
         AudioTrack track = getTrackById(id);
         return track != null && track.isFavourite;
     }
 
-    /** Mark track as downloaded */
     public void markDownloaded(String id, String localPath) {
         SQLiteDatabase db = getWritableDatabase();
         ContentValues cv = new ContentValues();
@@ -150,7 +144,6 @@ public class AudioDatabase extends SQLiteOpenHelper {
         db.update(TABLE, cv, "id = ?", new String[]{id});
     }
 
-    /** Mark track as not downloaded */
     public void markNotDownloaded(String id) {
         SQLiteDatabase db = getWritableDatabase();
         ContentValues cv = new ContentValues();
@@ -159,19 +152,6 @@ public class AudioDatabase extends SQLiteOpenHelper {
         db.update(TABLE, cv, "id = ?", new String[]{id});
     }
 
-    /** Check if database has any tracks (first launch check) */
-    public boolean hasTracks() {
-        SQLiteDatabase db = getReadableDatabase();
-        Cursor cursor = db.rawQuery("SELECT COUNT(*) FROM " + TABLE, null);
-        try {
-            if (cursor.moveToFirst()) {
-                return cursor.getInt(0) > 0;
-            }
-        } finally {
-            cursor.close();
-        }
-        return false;
-    }
 
     private AudioTrack cursorToTrack(Cursor cursor) {
         String id = cursor.getString(cursor.getColumnIndexOrThrow("id"));

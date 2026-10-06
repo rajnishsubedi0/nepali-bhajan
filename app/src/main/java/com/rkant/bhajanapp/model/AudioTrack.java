@@ -13,8 +13,8 @@ public class AudioTrack {
     public String url;
     public int durationSec;
     public String category;
-    public boolean isFavourite;      // Persisted in database
-    public boolean isDownloaded;     // Persisted in database
+    public boolean isFavourite;
+    public boolean isDownloaded;
     public String localPath;
     public int downloadState = STATE_NOT_DOWNLOADED;
 
@@ -25,11 +25,7 @@ public class AudioTrack {
         this.durationSec = durationSec;
     }
 
-    /**
-     * Returns a proper URI string for ExoPlayer:
-     * - file:// URI if downloaded locally and file exists
-     * - http(s) URL if streaming online
-     */
+
     public String playableUrl() {
         if (isDownloaded && localPath != null) {
             File f = new File(localPath);

@@ -40,10 +40,6 @@ public class DownloadHelper {
         return (f.exists() && f.length() > 0) ? f : null;
     }
 
-    public static boolean isDownloaded(Context c, String trackId) {
-        return getLocalFile(c, trackId) != null;
-    }
-
     public static void delete(Context c, String trackId) {
         File f = getLocalFile(c, trackId);
         if (f != null) f.delete();

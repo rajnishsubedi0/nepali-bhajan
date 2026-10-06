@@ -8,7 +8,7 @@ public class Bhajan {
     public String titleEnglish;
     public String category;
     public String type;
-    public List<String> lyrics;
+
 
     public Bhajan(String id, String titleNepali, String titleEnglish, String category, String type) {
         this.id = id;

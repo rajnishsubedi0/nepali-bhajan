@@ -152,18 +152,13 @@ public class PlaybackManager {
         notifyState();
     }
 
-    // ----- Getters -----
-    public MediaController getController() { return controller; }
-    public boolean isPlaying() { return controller != null && controller.isPlaying(); }
-    public boolean isShuffle() { return controller != null && controller.getShuffleModeEnabled(); }
-    public int getRepeatMode() { return controller == null ? Player.REPEAT_MODE_OFF : controller.getRepeatMode(); }
+
 
     public String getCurrentMediaId() {
         if (controller == null || controller.getCurrentMediaItem() == null) return null;
         return controller.getCurrentMediaItem().mediaId;
     }
 
-    // ----- Notification helpers -----
     private void notifyState() {
         if (controller == null) return;
         boolean playing = controller.isPlaying();

@@ -15,10 +15,6 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.VH> {
     private List<String> cats; private Context ctx; private OnClick l; private int sel = 0;
     public CategoryAdapter(List<String> cats, Context ctx, OnClick l) { this.cats = cats; this.ctx = ctx; this.l = l; }
 
-    /** Called by swipe gestures so chips stay in sync without re-triggering the click listener */
-    public void selectExternal(int pos) {
-        if (pos != sel) { int old = sel; sel = pos; notifyItemChanged(old); notifyItemChanged(sel); }
-    }
 
     @NonNull @Override public VH onCreateViewHolder(@NonNull ViewGroup p, int v) {
         return new VH(LayoutInflater.from(ctx).inflate(R.layout.item_category, p, false));

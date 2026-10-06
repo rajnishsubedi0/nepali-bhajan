@@ -24,13 +24,9 @@ public class AudioRepository {
     public interface LoadCallback {
         void onTracksLoaded(List<AudioTrack> tracks, boolean fromNetwork);
         void onError(String message);
+        void onComplete(); // Always called when loading is finished
     }
 
-    /**
-     * Load tracks with offline-first strategy:
-     * 1. Immediately return tracks from local database (works offline)
-     * 2. If internet available, sync from network and update database
-     */
     public static void loadTracks(Context context, LoadCallback callback) {
         new Thread(() -> {
             AudioDatabase db = AudioDatabase.getInstance(context);
@@ -38,12 +34,11 @@ public class AudioRepository {
             // Step 1: Load from database first (instant, offline-capable)
             List<AudioTrack> localTracks = db.getAllTracks();
 
-            // Verify download files still exist (user might have cleared storage)
+            // Verify download files still exist
             for (AudioTrack t : localTracks) {
                 if (t.isDownloaded && t.localPath != null) {
                     java.io.File f = new java.io.File(t.localPath);
                     if (!f.exists()) {
-                        // File was deleted, update database
                         db.markNotDownloaded(t.id);
                         t.isDownloaded = false;
                         t.localPath = null;
@@ -63,13 +58,9 @@ public class AudioRepository {
                     List<AudioTrack> networkTracks = parseTracks(json);
 
                     if (!networkTracks.isEmpty()) {
-                        // Save to database (preserves fav/download state)
                         db.saveTracks(networkTracks);
-
-                        // Re-read from DB to get merged fav/download state
                         List<AudioTrack> mergedTracks = db.getAllTracks();
 
-                        // Verify downloads again after merge
                         for (AudioTrack t : mergedTracks) {
                             if (t.isDownloaded && t.localPath != null) {
                                 java.io.File f = new java.io.File(t.localPath);
@@ -81,31 +72,30 @@ public class AudioRepository {
                                 }
                             }
                         }
-
                         callback.onTracksLoaded(mergedTracks, true);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
-                    // Network failed but we already showed local data, so just log it
                     if (localTracks.isEmpty()) {
                         callback.onError("Failed to load audio list");
                     }
                 }
             } else {
-                // No internet - if we have no local data either, show error
+                // No internet
                 if (localTracks.isEmpty()) {
                     callback.onError("No internet connection. Please connect to load bhajans.");
                 }
             }
+
+            // Always signal completion
+            callback.onComplete();
         }).start();
     }
 
-    /**
-     * Force sync from network only (used when internet reconnects)
-     */
     public static void syncFromNetwork(Context context, LoadCallback callback) {
         new Thread(() -> {
             if (!isNetworkAvailable(context)) {
+                callback.onComplete();
                 return;
             }
 
@@ -116,10 +106,8 @@ public class AudioRepository {
                 if (!networkTracks.isEmpty()) {
                     AudioDatabase db = AudioDatabase.getInstance(context);
                     db.saveTracks(networkTracks);
-
                     List<AudioTrack> mergedTracks = db.getAllTracks();
 
-                    // Verify downloads
                     for (AudioTrack t : mergedTracks) {
                         if (t.isDownloaded && t.localPath != null) {
                             java.io.File f = new java.io.File(t.localPath);
@@ -131,12 +119,13 @@ public class AudioRepository {
                             }
                         }
                     }
-
                     callback.onTracksLoaded(mergedTracks, true);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
             }
+
+            callback.onComplete();
         }).start();
     }
 

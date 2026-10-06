@@ -33,7 +33,6 @@ public class BatteryHelper {
 
     /** True if the app is already allowed to ignore battery optimizations. */
     public static boolean isExempt(Context c) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return true;
         try {
             PowerManager pm = (PowerManager) c.getSystemService(Context.POWER_SERVICE);
             return pm != null && pm.isIgnoringBatteryOptimizations(c.getPackageName());
@@ -42,7 +41,6 @@ public class BatteryHelper {
         }
     }
 
-    // ---------- Auto guide (shows up to 3 times until enabled) ----------
 
     public static void showGuideIfNeeded(Context c) {
         if (isExempt(c)) return;
@@ -52,7 +50,6 @@ public class BatteryHelper {
         showGuide(c);
     }
 
-    // ---------- The guidance dialog ----------
 
     public static void showGuide(Context c) {
         Dialog d = new Dialog(c);
@@ -74,7 +71,7 @@ public class BatteryHelper {
         setupDeviceTip(deviceTip);
 
         if (exempt) {
-            // Already enabled -> simplify the dialog.
+
             enable.setVisibility(View.GONE);
             deviceSettings.setVisibility(View.GONE);
             later.setText("Close");
@@ -101,10 +98,7 @@ public class BatteryHelper {
         }
     }
 
-    // ---------- Exemption request flow with fallbacks ----------
-
     public static void requestExemption(Context c) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return;
 
         // 1) Direct "ignore battery optimizations" system dialog.
         if (requestExemptionDialog(c)) return;
