@@ -10,6 +10,7 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import com.rkant.bhajanapp.utils.BatteryHelper;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -71,12 +72,15 @@ public class AudioListActivity extends AppCompatActivity implements AudioAdapter
         rv.setLayoutManager(new LinearLayoutManager(this));
         adapter = new AudioAdapter(tracks, this, this);
         rv.setAdapter(adapter);
+        BatteryHelper.showGuideIfNeeded(this);
 
         swipeRefresh = findViewById(R.id.swipe_refresh);
         swipeRefresh.setOnRefreshListener(this::loadAudios);
 
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
         findViewById(R.id.btn_refresh).setOnClickListener(v -> loadAudios());
+
+        PlaybackManager.requestBatteryExemption(this);
 
         setupMiniPlayer();
         loadAudios();

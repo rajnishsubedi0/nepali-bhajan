@@ -6,6 +6,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import com.rkant.bhajanapp.R;
 import com.rkant.bhajanapp.utils.Helper;
+import com.rkant.bhajanapp.utils.BatteryHelper;
 
 public class SettingsActivity extends AppCompatActivity {
     private int themeMode, timeout, listScale, lyricScale;
@@ -26,12 +27,14 @@ public class SettingsActivity extends AppCompatActivity {
         tvListSize = findViewById(R.id.tv_list_size);
         tvLyricSize = findViewById(R.id.tv_lyric_size);
 
+
         themeBtns = new TextView[]{findViewById(R.id.btn_system), findViewById(R.id.btn_light), findViewById(R.id.btn_dark)};
         timeoutBtns = new TextView[]{findViewById(R.id.btn_t1), findViewById(R.id.btn_t3), findViewById(R.id.btn_t5), findViewById(R.id.btn_t10), findViewById(R.id.btn_talways)};
 
         for (int i = 0; i < 3; i++) { int m = i; themeBtns[i].setOnClickListener(v -> { themeMode = m; update(); }); }
         for (int i = 0; i < timeoutBtns.length; i++) { int t = timeoutValues[i]; timeoutBtns[i].setOnClickListener(v -> { timeout = t; update(); }); }
 
+        findViewById(R.id.btn_battery).setOnClickListener(v -> BatteryHelper.showGuide(this));
         findViewById(R.id.btn_list_minus).setOnClickListener(v -> { listScale = clamp(listScale - 1); update(); });
         findViewById(R.id.btn_list_plus).setOnClickListener(v -> { listScale = clamp(listScale + 1); update(); });
         findViewById(R.id.btn_lyric_minus).setOnClickListener(v -> { lyricScale = clamp(lyricScale - 1); update(); });

@@ -4,6 +4,11 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
+import android.os.PowerManager;
+import android.provider.Settings;
 
 import androidx.core.content.ContextCompat;
 import androidx.media3.common.MediaItem;
@@ -11,6 +16,7 @@ import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
 import androidx.media3.session.MediaController;
 import androidx.media3.session.SessionToken;
+
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.rkant.bhajanapp.model.AudioTrack;
@@ -79,6 +85,26 @@ public class PlaybackManager {
     }
 
     public void removeListener(Listener l) { listeners.remove(l); }
+    public static void requestBatteryExemption(Context context) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+                String pkg = context.getPackageName();
+                if (pm != null && !pm.isIgnoringBatteryOptimizations(pkg)) {
+                    Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                    intent.setData(Uri.parse("package:" + pkg));
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    context.startActivity(intent);
+                }
+            }
+        } catch (Exception e) {
+            try {
+                Intent intent = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(intent);
+            } catch (Exception ignored) {}
+        }
+    }
 
     // ----- Controls -----
     public void playPause() {
