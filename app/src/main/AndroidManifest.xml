@@ -25,11 +25,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
+        <activity
+            android:name=".ui.MusicPlayerActivity"
+            android:theme="@style/Theme.BhajanPlayerSheet" />
         <activity android:name=".ui.DetailActivity" />
         <activity android:name=".ui.SettingsActivity" />
         <activity android:name=".ui.AudioListActivity" />
-        <activity android:name=".ui.MusicPlayerActivity" />
+
 
         <service
             android:name=".service.BhajanMediaService"

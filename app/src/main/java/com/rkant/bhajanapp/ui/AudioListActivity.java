@@ -31,6 +31,9 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+import android.animation.ValueAnimator;
+import android.graphics.RenderEffect;
+import android.graphics.Shader;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.tabs.TabLayout;
@@ -44,6 +47,7 @@ import com.rkant.bhajanapp.utils.BatteryHelper;
 import com.rkant.bhajanapp.utils.DownloadHelper;
 import com.rkant.bhajanapp.utils.Helper;
 import com.rkant.bhajanapp.utils.PlaybackManager;
+import com.rkant.bhajanapp.utils.SheetBus;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -52,7 +56,7 @@ import java.util.List;
 import java.util.Map;
 
 public class AudioListActivity extends AppCompatActivity
-        implements AudioAdapter.OnTrackAction, PlaylistAdapter.OnPlaylistAction {
+        implements AudioAdapter.OnTrackAction, PlaylistAdapter.OnPlaylistAction, SheetBus.Listener {
 
     private static final int REQ_NOTIFICATION = 1001;
 
@@ -60,6 +64,10 @@ public class AudioListActivity extends AppCompatActivity
 
     private AudioAdapter audioAdapter;
     private PlaylistAdapter playlistAdapter;
+    private View contentView;
+    private View dimOverlay;
+    private ValueAnimator blurAnim;
+    private float sheetBlur = 0f;
 
     private final List<AudioTrack> allTracks = new ArrayList<>();
     private final List<AudioTrack> displayedTracks = new ArrayList<>();
@@ -87,6 +95,7 @@ public class AudioListActivity extends AppCompatActivity
     private ConnectivityManager connectivityManager;
     private ConnectivityManager.NetworkCallback networkCallback;
     private boolean wasOffline = false;
+
 
     private final PlaybackManager.Listener playbackListener = new PlaybackManager.Listener() {
         @Override
@@ -146,6 +155,9 @@ public class AudioListActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_audio_list);
+
+        contentView = findViewById(R.id.audio_content);
+        dimOverlay = findViewById(R.id.dim_overlay);
 
         requestNotificationPermission();
         BatteryHelper.showGuideIfNeeded(this);
@@ -446,8 +458,7 @@ public class AudioListActivity extends AppCompatActivity
         ImageView miniPrev = findViewById(R.id.mini_prev);
         ImageView miniNext = findViewById(R.id.mini_next);
 
-        miniPlayer.setOnClickListener(v ->
-                startActivity(new Intent(this, MusicPlayerActivity.class)));
+        miniPlayer.setOnClickListener(v -> openPlayer());
 
         miniPlay.setOnClickListener(v -> PlaybackManager.getInstance().playPause());
         miniPrev.setOnClickListener(v -> PlaybackManager.getInstance().prev());
@@ -799,6 +810,8 @@ public class AudioListActivity extends AppCompatActivity
     @Override
     protected void onStart() {
         super.onStart();
+        SheetBus.setListener(this);
+        if (MusicPlayerActivity.isSheetOpen) applySheetBlur(1f);
         PlaybackManager.getInstance().connect(this);
         PlaybackManager.getInstance().addListener(playbackListener);
     }
@@ -813,6 +826,7 @@ public class AudioListActivity extends AppCompatActivity
     @Override
     protected void onStop() {
         super.onStop();
+        SheetBus.setListener(null);
         PlaybackManager.getInstance().removeListener(playbackListener);
     }
 
@@ -843,5 +857,42 @@ public class AudioListActivity extends AppCompatActivity
         }
 
         super.onBackPressed();
+    }
+
+    private void openPlayer() {
+        animateSheetBlur(1f);
+        startActivity(new Intent(this, MusicPlayerActivity.class));
+    }
+
+    private void applySheetBlur(float p) {
+        p = Math.max(0f, Math.min(1f, p));
+        sheetBlur = p;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (p <= 0.02f) {
+                contentView.setRenderEffect(null);
+            } else {
+                float radius = Math.min(90f, 35f * p * getResources().getDisplayMetrics().density);
+                contentView.setRenderEffect(
+                        RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.CLAMP));
+            }
+        }
+
+        dimOverlay.setAlpha(0.45f * p);
+    }
+
+    private void animateSheetBlur(float target) {
+        if (blurAnim != null) blurAnim.cancel();
+
+        blurAnim = ValueAnimator.ofFloat(sheetBlur, target);
+        blurAnim.setDuration(260);
+        blurAnim.addUpdateListener(a -> applySheetBlur((float) a.getAnimatedValue()));
+        blurAnim.start();
+    }
+
+    @Override
+    public void onSheetOpenProgress(float openProgress) {
+        if (blurAnim != null) blurAnim.cancel();
+        applySheetBlur(openProgress);
     }
 }

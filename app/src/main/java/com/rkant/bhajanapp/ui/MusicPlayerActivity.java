@@ -1,5 +1,6 @@
 package com.rkant.bhajanapp.ui;
 
+import android.animation.ValueAnimator;
 import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -9,6 +10,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.view.animation.AccelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -27,10 +30,16 @@ import com.rkant.bhajanapp.utils.AudioRepository;
 import com.rkant.bhajanapp.utils.DownloadHelper;
 import com.rkant.bhajanapp.utils.Helper;
 import com.rkant.bhajanapp.utils.PlaybackManager;
+import com.rkant.bhajanapp.utils.SheetBus;
 
 import java.util.List;
 
-public class MusicPlayerActivity extends AppCompatActivity {
+public class MusicPlayerActivity extends AppCompatActivity implements SheetDragLayout.DragCallback {
+
+    public static volatile boolean isSheetOpen = false;
+
+    private SheetDragLayout sheetRoot;
+    private boolean closing = false;
 
     private TextView tvTitle, tvCurrentTime, tvTotalTime, tvSpeed, tvSleep;
     private SeekBar seekBar;
@@ -104,6 +113,9 @@ public class MusicPlayerActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_music_player);
+
+        sheetRoot = findViewById(R.id.sheet_root);
+        sheetRoot.setDragCallback(this);
 
         tvTitle = findViewById(R.id.tv_title);
         tvCurrentTime = findViewById(R.id.tv_current_time);
@@ -211,7 +223,104 @@ public class MusicPlayerActivity extends AppCompatActivity {
     }
 
     // ═══════════════════════════════════════════════════════════
-    // CURRENT TRACK (for download button)
+    // DRAG TO DISMISS (bottom-sheet behavior)
+    // ═══════════════════════════════════════════════════════════
+
+    private float clamp01(float v) {
+        return Math.max(0f, Math.min(1f, v));
+    }
+
+    @Override
+    public void onSheetDrag(float fraction) {
+        if (closing) return;
+
+        float height = Math.max(1, sheetRoot.getHeight());
+        sheetRoot.setTranslationY(fraction * height);
+
+        float scale = 1f - 0.06f * fraction;
+        sheetRoot.setPivotX(sheetRoot.getWidth() / 2f);
+        sheetRoot.setPivotY(0f);
+        sheetRoot.setScaleX(scale);
+        sheetRoot.setScaleY(scale);
+
+        SheetBus.emit(1f - fraction);
+    }
+
+    @Override
+    public void onSheetRelease(float fraction, float velocityY) {
+        if (closing) return;
+
+        if (fraction > 0.35f || velocityY > 1500f) {
+            performClose();
+        } else {
+            springBack();
+        }
+    }
+
+    private void springBack() {
+        float from = sheetRoot.getTranslationY();
+        float height = Math.max(1, sheetRoot.getHeight());
+
+        ValueAnimator va = ValueAnimator.ofFloat(from, 0f);
+        va.setDuration(220);
+        va.setInterpolator(new DecelerateInterpolator());
+        va.addUpdateListener(a -> {
+            float v = (float) a.getAnimatedValue();
+            sheetRoot.setTranslationY(v);
+
+            float f = clamp01(v / height);
+            float scale = 1f - 0.06f * f;
+            sheetRoot.setScaleX(scale);
+            sheetRoot.setScaleY(scale);
+
+            SheetBus.emit(1f - f);
+        });
+        va.start();
+    }
+
+    private void performClose() {
+        if (closing) return;
+        closing = true;
+        sheetRoot.setDragCallback(null);
+
+        float from = sheetRoot.getTranslationY();
+        float to = Math.max(1, sheetRoot.getHeight());
+
+        ValueAnimator va = ValueAnimator.ofFloat(from, to);
+        va.setDuration(230);
+        va.setInterpolator(new AccelerateInterpolator());
+        va.addUpdateListener(a -> {
+            float v = (float) a.getAnimatedValue();
+            sheetRoot.setTranslationY(v);
+
+            float f = clamp01(v / to);
+            float scale = 1f - 0.06f * f;
+            sheetRoot.setScaleX(scale);
+            sheetRoot.setScaleY(scale);
+
+            SheetBus.emit(1f - f);
+        });
+        va.addListener(new android.animation.AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(android.animation.Animator animation) {
+                finish();
+                overridePendingTransition(0, 0);
+            }
+        });
+        va.start();
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (!closing) {
+            performClose();
+            return;
+        }
+        super.onBackPressed();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // CURRENT TRACK (download button)
     // ═══════════════════════════════════════════════════════════
 
     private void loadCurrentTrack() {
@@ -268,7 +377,7 @@ public class MusicPlayerActivity extends AppCompatActivity {
     }
 
     // ═══════════════════════════════════════════════════════════
-    // SPEED / SLEEP / REPEAT
+    // SPEED / SLEEP / REPEAT / FAV
     // ═══════════════════════════════════════════════════════════
 
     private void cyclePlaybackSpeed() {
@@ -375,6 +484,7 @@ public class MusicPlayerActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
+        isSheetOpen = true;
 
         PlaybackManager.getInstance().connect(this);
         PlaybackManager.getInstance().addListener(playbackListener);
@@ -393,6 +503,7 @@ public class MusicPlayerActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
+        isSheetOpen = false;
 
         PlaybackManager.getInstance().removeListener(playbackListener);
         uiHandler.removeCallbacks(sleepTick);
