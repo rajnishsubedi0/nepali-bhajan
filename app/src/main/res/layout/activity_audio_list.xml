@@ -1,153 +1,171 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/root_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg"
     android:fitsSystemWindows="true">
 
-    <LinearLayout
-        android:id="@+id/audio_content"
+    <FrameLayout
+        android:id="@+id/blur_target"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/bg"
-        android:orientation="vertical">
+        android:layout_height="match_parent">
 
         <LinearLayout
+            android:id="@+id/audio_content"
             android:layout_width="match_parent"
-            android:layout_height="64dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingHorizontal="16dp">
+            android:layout_height="match_parent"
+            android:background="@color/bg"
+            android:orientation="vertical">
 
-            <ImageView
-                android:id="@+id/btn_back"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:padding="12dp"
-                android:src="@drawable/ic_close"
-                android:tint="@color/text_primary" />
-
-            <TextView
-                android:id="@+id/tv_audio_title"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:layout_weight="1"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:text="Bhajan Audio"
-                android:textColor="@color/text_primary"
-                android:textSize="20sp"
-                android:textStyle="bold" />
-
-            <ImageView
-                android:id="@+id/btn_create_playlist"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:padding="12dp"
-                android:src="@drawable/ic_playlist_add"
-                android:tint="@color/accent"
-                android:visibility="gone" />
-
-            <ImageView
-                android:id="@+id/btn_download_all"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:padding="12dp"
-                android:src="@drawable/ic_download_all"
-                android:tint="@color/accent" />
-
-            <ImageView
-                android:id="@+id/btn_refresh"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:padding="12dp"
-                android:src="@drawable/ic_refresh"
-                android:tint="@color/text_secondary" />
-        </LinearLayout>
-
-        <com.google.android.material.tabs.TabLayout
-            android:id="@+id/audio_tabs"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="@color/card"
-            app:tabIndicatorColor="@color/accent"
-            app:tabMode="scrollable"
-            app:tabSelectedTextColor="@color/accent"
-            app:tabTextColor="@color/text_secondary" />
-
-        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-            android:id="@+id/swipe_refresh"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1">
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rv_audio_list"
+            <!-- Quick filter icons (5 tabs) -->
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:clipToPadding="false"
-                android:paddingBottom="16dp" />
-        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+                android:layout_height="64dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="10dp">
 
-        <!-- Bottom info bar (Recent tab / playlist view) -->
-        <LinearLayout
-            android:id="@+id/bottom_bar"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:background="@color/card"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:visibility="gone">
+                <ImageView
+                    android:id="@+id/filter_all"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_weight="1"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_all"
+                    android:tint="@color/text_secondary" />
 
-            <TextView
-                android:id="@+id/tv_audio_count"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="0 tracks"
-                android:textColor="@color/text_primary"
-                android:textSize="15sp"
-                android:textStyle="bold" />
+                <ImageView
+                    android:id="@+id/filter_fav"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_weight="1"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_heart_outline"
+                    android:tint="@color/text_secondary" />
 
-            <View
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
+                <ImageView
+                    android:id="@+id/filter_download"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_weight="1"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_download"
+                    android:tint="@color/text_secondary" />
 
-            <TextView
-                android:id="@+id/btn_clear_recent"
-                android:layout_width="wrap_content"
-                android:layout_height="38dp"
-                android:background="@drawable/bg_pill"
-                android:gravity="center"
-                android:paddingHorizontal="16dp"
-                android:text="Clear Recent"
-                android:textColor="@color/red"
-                android:textSize="13sp"
-                android:textStyle="bold" />
+                <ImageView
+                    android:id="@+id/filter_recent"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_weight="1"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_history"
+                    android:tint="@color/text_secondary" />
+
+                <ImageView
+                    android:id="@+id/filter_playlist"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_weight="1"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_playlist"
+                    android:tint="@color/text_secondary" />
+            </LinearLayout>
+
+            <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+                android:id="@+id/swipe_refresh"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_audio_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:clipToPadding="false"
+                    android:paddingBottom="120dp" />
+            </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+            <!-- Bottom info bar (Recent / Playlists / Downloads views) -->
+            <LinearLayout
+                android:id="@+id/bottom_bar"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:background="@color/card"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="20dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/tv_audio_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0 tracks"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/btn_new_playlist"
+                    android:layout_width="wrap_content"
+                    android:layout_height="38dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="@drawable/bg_pill"
+                    android:gravity="center"
+                    android:paddingHorizontal="16dp"
+                    android:text="New Playlist"
+                    android:textColor="@color/accent"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/btn_clear_recent"
+                    android:layout_width="wrap_content"
+                    android:layout_height="38dp"
+                    android:background="@drawable/bg_pill"
+                    android:gravity="center"
+                    android:paddingHorizontal="16dp"
+                    android:text="Clear Recent"
+                    android:textColor="@color/red"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+            </LinearLayout>
+
         </LinearLayout>
 
-        <!-- Mini Player -->
+        <!-- FLOATING mini player card -->
         <LinearLayout
             android:id="@+id/mini_player"
             android:layout_width="match_parent"
-            android:layout_height="68dp"
-            android:background="@color/card"
+            android:layout_height="78dp"
+            android:layout_gravity="bottom"
+            android:layout_marginStart="14dp"
+            android:layout_marginEnd="14dp"
+            android:layout_marginBottom="14dp"
+            android:background="@drawable/bg_mini_player"
+            android:elevation="10dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="12dp"
             android:visibility="gone">
 
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginEnd="6dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
@@ -183,7 +201,7 @@
                 android:layout_width="52dp"
                 android:layout_height="52dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:padding="10dp"
+                android:padding="12dp"
                 android:src="@drawable/ic_play_arrow"
                 android:tint="@color/accent" />
 
@@ -195,11 +213,21 @@
                 android:padding="10dp"
                 android:src="@drawable/ic_skip_next"
                 android:tint="@color/text_primary" />
+
+            <ImageView
+                android:id="@+id/mini_stop"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginStart="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="10dp"
+                android:src="@drawable/ic_close"
+                android:tint="@color/text_secondary" />
         </LinearLayout>
 
-    </LinearLayout>
+    </FrameLayout>
 
-    <!-- Blur dim layer (animated while the player sheet opens / drags) -->
+    <!-- Blur dim layer for the player sheet -->
     <View
         android:id="@+id/dim_overlay"
         android:layout_width="match_parent"
