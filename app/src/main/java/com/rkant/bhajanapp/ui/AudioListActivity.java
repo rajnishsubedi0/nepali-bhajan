@@ -19,6 +19,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -80,7 +81,7 @@ public class AudioListActivity extends AppCompatActivity
     private boolean isSyncing = false;
     private boolean currentlyPlaying = false;
 
-    private ImageView filterFav, filterDownload, filterRecent, filterPlaylist;
+    private ImageView filterAll, filterFav, filterDownload, filterRecent, filterPlaylist;
     private View bottomBar, btnClearRecent, btnNewPlaylist;
     private TextView tvAudioCount;
 
@@ -93,6 +94,10 @@ public class AudioListActivity extends AppCompatActivity
     private View dimOverlay;
     private ValueAnimator blurAnim;
     private float sheetBlur = 0f;
+
+    // Swipe to dismiss mini player
+    private float downX = 0;
+    private boolean isSwiping = false;
 
     private ConnectivityManager connectivityManager;
     private ConnectivityManager.NetworkCallback networkCallback;
@@ -178,11 +183,13 @@ public class AudioListActivity extends AppCompatActivity
         btnClearRecent = findViewById(R.id.btn_clear_recent);
         btnNewPlaylist = findViewById(R.id.btn_new_playlist);
 
+        filterAll = findViewById(R.id.filter_all);
         filterFav = findViewById(R.id.filter_fav);
         filterDownload = findViewById(R.id.filter_download);
         filterRecent = findViewById(R.id.filter_recent);
         filterPlaylist = findViewById(R.id.filter_playlist);
 
+        filterAll.setOnClickListener(v -> setFilter(FILTER_ALL));
         filterFav.setOnClickListener(v -> setFilter(FILTER_FAV));
         filterDownload.setOnClickListener(v -> setFilter(FILTER_DOWNLOADS));
         filterRecent.setOnClickListener(v -> setFilter(FILTER_RECENT));
@@ -215,7 +222,7 @@ public class AudioListActivity extends AppCompatActivity
     }
 
     // ═══════════════════════════════════════════════════════════
-    // FILTERS (replace tabs)
+    // FILTERS (5 tabs)
     // ═══════════════════════════════════════════════════════════
 
     private void setFilter(int filter) {
@@ -226,15 +233,17 @@ public class AudioListActivity extends AppCompatActivity
     }
 
     private void updateFilterIcons() {
-        styleFilterIcon(filterFav, currentFilter == FILTER_FAV, true);
-        styleFilterIcon(filterDownload, currentFilter == FILTER_DOWNLOADS, false);
-        styleFilterIcon(filterRecent, currentFilter == FILTER_RECENT, false);
-        styleFilterIcon(filterPlaylist, currentFilter == FILTER_PLAYLISTS, false);
+        styleFilterIcon(filterAll, currentFilter == FILTER_ALL, false, R.drawable.ic_all);
+        styleFilterIcon(filterFav, currentFilter == FILTER_FAV, true, R.drawable.ic_heart_outline);
+        styleFilterIcon(filterDownload, currentFilter == FILTER_DOWNLOADS, false, R.drawable.ic_download);
+        styleFilterIcon(filterRecent, currentFilter == FILTER_RECENT, false, R.drawable.ic_history);
+        styleFilterIcon(filterPlaylist, currentFilter == FILTER_PLAYLISTS, false, R.drawable.ic_playlist);
     }
 
-    private void styleFilterIcon(ImageView v, boolean selected, boolean isFav) {
+    private void styleFilterIcon(ImageView v, boolean selected, boolean isFav, int defaultIcon) {
         if (selected) {
-            v.setBackgroundResource(R.drawable.bg_icon_selected);
+            // Changed from bg_icon_selected to bg_tab_selected for a rounded rectangle look
+            v.setBackgroundResource(R.drawable.bg_tab_selected);
             if (isFav) {
                 v.setImageResource(R.drawable.ic_heart_filled);
                 v.setColorFilter(getColor(R.color.red));
@@ -244,6 +253,7 @@ public class AudioListActivity extends AppCompatActivity
         } else {
             v.setBackgroundResource(android.R.color.transparent);
             if (isFav) v.setImageResource(R.drawable.ic_heart_outline);
+            else v.setImageResource(defaultIcon);
             v.setColorFilter(getColor(R.color.text_secondary));
         }
     }
@@ -254,7 +264,6 @@ public class AudioListActivity extends AppCompatActivity
 
     private void loadAudios(boolean showSpinner) {
         if (showSpinner) swipeRefresh.setRefreshing(true);
-
         isSyncing = true;
 
         AudioRepository.loadTracks(this, new AudioRepository.LoadCallback() {
@@ -270,9 +279,7 @@ public class AudioListActivity extends AppCompatActivity
             @Override
             public void onError(String message) {
                 runOnUiThread(() -> {
-                    if (showSpinner) {
-                        Toast.makeText(AudioListActivity.this, message, Toast.LENGTH_SHORT).show();
-                    }
+                    if (showSpinner) Toast.makeText(AudioListActivity.this, message, Toast.LENGTH_SHORT).show();
                 });
             }
 
@@ -288,7 +295,6 @@ public class AudioListActivity extends AppCompatActivity
 
     private void syncFromNetwork() {
         if (isSyncing) return;
-
         isSyncing = true;
 
         AudioRepository.syncFromNetwork(this, new AudioRepository.LoadCallback() {
@@ -298,17 +304,12 @@ public class AudioListActivity extends AppCompatActivity
                     allTracks.clear();
                     allTracks.addAll(tracks);
                     refreshDisplayedList();
-
-                    if (fromNetwork) {
-                        Toast.makeText(AudioListActivity.this, "Audio list updated", Toast.LENGTH_SHORT).show();
-                    }
+                    if (fromNetwork) Toast.makeText(AudioListActivity.this, "Audio list updated", Toast.LENGTH_SHORT).show();
                 });
             }
 
             @Override
-            public void onError(String message) {
-                // Silent sync
-            }
+            public void onError(String message) {}
 
             @Override
             public void onComplete() {
@@ -322,16 +323,13 @@ public class AudioListActivity extends AppCompatActivity
 
     private void setupNetworkMonitor() {
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-
         networkCallback = new ConnectivityManager.NetworkCallback() {
             @Override
             public void onAvailable(@NonNull Network network) {
                 if (wasOffline) {
                     wasOffline = false;
                     new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                        if (!isFinishing() && !isSyncing) {
-                            syncFromNetwork();
-                        }
+                        if (!isFinishing() && !isSyncing) syncFromNetwork();
                     }, 1000);
                 }
             }
@@ -360,7 +358,6 @@ public class AudioListActivity extends AppCompatActivity
     // ═══════════════════════════════════════════════════════════
 
     private void refreshDisplayedList() {
-        // Playlist list view
         if (currentFilter == FILTER_PLAYLISTS && selectedPlaylist == null) {
             if (recyclerView.getAdapter() != playlistAdapter) {
                 recyclerView.setAdapter(playlistAdapter);
@@ -377,41 +374,28 @@ public class AudioListActivity extends AppCompatActivity
         displayedTracks.clear();
 
         if (currentFilter == FILTER_FAV) {
-            for (AudioTrack t : allTracks) {
-                if (t.isFavourite) displayedTracks.add(t);
-            }
+            for (AudioTrack t : allTracks) if (t.isFavourite) displayedTracks.add(t);
         } else if (currentFilter == FILTER_DOWNLOADS) {
-            for (AudioTrack t : allTracks) {
-                if (t.isDownloaded) displayedTracks.add(t);
-            }
+            for (AudioTrack t : allTracks) if (t.isDownloaded) displayedTracks.add(t);
         } else if (currentFilter == FILTER_RECENT) {
             List<String> recentIds = Helper.getAudioRecentIds(this);
             if (recentIds.size() > 10) recentIds = recentIds.subList(0, 10);
-
             for (String id : recentIds) {
                 for (AudioTrack t : allTracks) {
-                    if (t.id.equals(id)) {
-                        displayedTracks.add(t);
-                        break;
-                    }
+                    if (t.id.equals(id)) { displayedTracks.add(t); break; }
                 }
             }
         } else if (currentFilter == FILTER_PLAYLISTS && selectedPlaylist != null) {
             Map<String, List<String>> playlists = Helper.getPlaylists(this);
             List<String> ids = playlists.get(selectedPlaylist);
-
             if (ids == null) {
                 selectedPlaylist = null;
                 refreshDisplayedList();
                 return;
             }
-
             for (String id : ids) {
                 for (AudioTrack t : allTracks) {
-                    if (t.id.equals(id)) {
-                        displayedTracks.add(t);
-                        break;
-                    }
+                    if (t.id.equals(id)) { displayedTracks.add(t); break; }
                 }
             }
         } else {
@@ -426,18 +410,17 @@ public class AudioListActivity extends AppCompatActivity
         Map<String, List<String>> playlists = Helper.getPlaylists(this);
         List<String> names = new ArrayList<>(playlists.keySet());
         Map<String, Integer> counts = new HashMap<>();
-
         for (String name : names) {
             counts.put(name, playlists.get(name).size());
         }
-
         playlistAdapter.update(names, counts);
     }
 
     private void updateBottomBar() {
         boolean recentView = currentFilter == FILTER_RECENT;
         boolean playlistView = currentFilter == FILTER_PLAYLISTS && selectedPlaylist == null;
-        boolean show = recentView || playlistView;
+        boolean downloadView = currentFilter == FILTER_DOWNLOADS;
+        boolean show = recentView || playlistView || downloadView;
 
         bottomBar.setVisibility(show ? View.VISIBLE : View.GONE);
 
@@ -457,7 +440,7 @@ public class AudioListActivity extends AppCompatActivity
     }
 
     // ═══════════════════════════════════════════════════════════
-    // FLOATING MINI PLAYER
+    // FLOATING MINI PLAYER (Swipe + Stop + Persistence)
     // ═══════════════════════════════════════════════════════════
 
     private void setupMiniPlayer() {
@@ -468,31 +451,83 @@ public class AudioListActivity extends AppCompatActivity
 
         ImageView miniPrev = findViewById(R.id.mini_prev);
         ImageView miniNext = findViewById(R.id.mini_next);
+        ImageView miniStop = findViewById(R.id.mini_stop);
 
-        miniPlayer.setOnClickListener(v -> openPlayer());
+        // Handle both swipe and tap in one place to prevent conflicts
+        miniPlayer.setOnTouchListener((v, event) -> {
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    downX = event.getRawX();
+                    isSwiping = false;
+                    return true; // Consume DOWN to block OnClickListener from firing later
+
+                case MotionEvent.ACTION_MOVE:
+                    float moveDx = event.getRawX() - downX;
+                    if (Math.abs(moveDx) > 10) {
+                        isSwiping = true;
+                        miniPlayer.setTranslationX(moveDx);
+                        miniPlayer.setAlpha(1 - Math.min(1, Math.abs(moveDx) / 300f));
+                    }
+                    return true;
+
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    if (isSwiping) {
+                        float upDx = event.getRawX() - downX;
+                        if (Math.abs(upDx) > 150) {
+                            stopAndHideMiniPlayer(upDx > 0 ? 500 : -500);
+                        } else {
+                            miniPlayer.animate().translationX(0).alpha(1).setDuration(200).start();
+                        }
+                    } else {
+                        // It was a clean tap, not a swipe
+                        openPlayer();
+                    }
+                    downX = 0;
+                    isSwiping = false;
+                    return true;
+            }
+            return true;
+        });
+
         miniPlay.setOnClickListener(v -> PlaybackManager.getInstance().playPause());
         miniPrev.setOnClickListener(v -> PlaybackManager.getInstance().prev());
         miniNext.setOnClickListener(v -> PlaybackManager.getInstance().next());
+        miniStop.setOnClickListener(v -> stopAndHideMiniPlayer(0));
     }
 
     private void updateMiniPlayer(boolean isPlaying, String title, String mediaId) {
         if (mediaId == null || mediaId.isEmpty()) {
-            miniPlayer.setVisibility(View.GONE);
-        } else {
-            miniPlayer.setVisibility(View.VISIBLE);
-            miniTitle.setText(title != null && !title.isEmpty() ? title : "Bhajan Audio");
-            miniPlay.setImageResource(isPlaying ? R.drawable.ic_pause : R.drawable.ic_play_arrow);
+            if (miniPlayer.getVisibility() != View.GONE) {
+                miniPlayer.setVisibility(View.GONE);
+            }
+            return;
         }
+
+        if (miniPlayer.getVisibility() != View.VISIBLE) {
+            miniPlayer.setVisibility(View.VISIBLE);
+            miniPlayer.setTranslationX(0);
+            miniPlayer.setAlpha(1);
+        }
+
+        miniTitle.setText(title != null && !title.isEmpty() ? title : "Bhajan Audio");
+        miniPlay.setImageResource(isPlaying ? R.drawable.ic_pause : R.drawable.ic_play_arrow);
         updateMiniMargin();
     }
 
-    /** Lifts the floating card above the bottom bar when the bar is visible. */
+    private void stopAndHideMiniPlayer(float endX) {
+        miniPlayer.animate().translationX(endX).alpha(0).setDuration(200).withEndAction(() -> {
+            PlaybackManager.getInstance().stopAndClear();
+            miniPlayer.setTranslationX(0);
+            miniPlayer.setAlpha(1);
+            miniPlayer.setVisibility(View.GONE);
+        }).start();
+    }
+
     private void updateMiniMargin() {
         if (miniPlayer == null || bottomBar == null) return;
-
         float density = getResources().getDisplayMetrics().density;
         boolean barVisible = bottomBar.getVisibility() == View.VISIBLE;
-
         int bottomMargin = (int) ((barVisible ? 70 : 14) * density);
         int sideMargin = (int) (14 * density);
 
@@ -509,12 +544,11 @@ public class AudioListActivity extends AppCompatActivity
     }
 
     // ═══════════════════════════════════════════════════════════
-    // TRACK OPTIONS BOTTOM SHEET (long-press popup)
+    // TRACK OPTIONS BOTTOM SHEET
     // ═══════════════════════════════════════════════════════════
 
     private void showTrackOptions(AudioTrack track) {
         if (track == null) return;
-
         PlaybackManager pm = PlaybackManager.getInstance();
         boolean isCurrent = track.id != null && track.id.equals(pm.getCurrentMediaId());
 
@@ -533,9 +567,7 @@ public class AudioListActivity extends AppCompatActivity
         View sheetClose = v.findViewById(R.id.sheet_close);
 
         sheetTitle.setText(track.title);
-        sheetDuration.setText("Duration: " + (track.durationSec > 0
-                ? Helper.formatTime(track.durationSec * 1000L)
-                : "--:--"));
+        sheetDuration.setText("Duration: " + (track.durationSec > 0 ? Helper.formatTime(track.durationSec * 1000L) : "--:--"));
         sheetSource.setText(track.isDownloaded ? "Saved on this device" : "Streams from online");
 
         if (track.isDownloaded) {
@@ -552,14 +584,10 @@ public class AudioListActivity extends AppCompatActivity
         sheetPlay.setText(isCurrent && currentlyPlaying ? "Pause" : "Play");
         sheetPlay.setOnClickListener(x -> {
             dialog.dismiss();
-            if (isCurrent) {
-                pm.playPause();
-            } else {
+            if (isCurrent) pm.playPause();
+            else {
                 int pos = displayedTracks.indexOf(track);
-                if (pos >= 0) {
-                    pm.connect(this);
-                    pm.playList(displayedTracks, pos);
-                }
+                if (pos >= 0) { pm.connect(this); pm.playList(displayedTracks, pos); }
             }
         });
 
@@ -570,15 +598,9 @@ public class AudioListActivity extends AppCompatActivity
             sheetFav.setText("Add to Favourites");
             sheetFav.setTextColor(getColor(R.color.text_primary));
         }
-        sheetFav.setOnClickListener(x -> {
-            dialog.dismiss();
-            toggleFavourite(track);
-        });
+        sheetFav.setOnClickListener(x -> { dialog.dismiss(); toggleFavourite(track); });
 
-        sheetPlaylist.setOnClickListener(x -> {
-            dialog.dismiss();
-            showAddToPlaylistDialog(track);
-        });
+        sheetPlaylist.setOnClickListener(x -> { dialog.dismiss(); showAddToPlaylistDialog(track); });
 
         if (track.isDownloaded) {
             sheetDownload.setText("Delete Download");
@@ -590,10 +612,7 @@ public class AudioListActivity extends AppCompatActivity
             sheetDownload.setText("Download");
             sheetDownload.setTextColor(getColor(R.color.text_primary));
         }
-        sheetDownload.setOnClickListener(x -> {
-            dialog.dismiss();
-            handleDownloadAction(track);
-        });
+        sheetDownload.setOnClickListener(x -> { dialog.dismiss(); handleDownloadAction(track); });
 
         if (selectedPlaylist != null) {
             sheetRemovePlaylist.setVisibility(View.VISIBLE);
@@ -606,25 +625,18 @@ public class AudioListActivity extends AppCompatActivity
         }
 
         sheetClose.setOnClickListener(x -> dialog.dismiss());
-
         dialog.setContentView(v);
         dialog.show();
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // SHARED ACTIONS (synced across all views)
-    // ═══════════════════════════════════════════════════════════
-
     private void toggleFavourite(AudioTrack track) {
         if (track.isFavourite) {
-            Helper.showConfirm(this, "Remove from Favourites",
-                    "Remove \"" + track.title + "\" from favourites?",
-                    "Remove", true, () -> {
-                        track.isFavourite = false;
-                        AudioDatabase.getInstance(this).toggleFavourite(track.id);
-                        refreshDisplayedList();
-                        Toast.makeText(this, "Removed from favourites", Toast.LENGTH_SHORT).show();
-                    });
+            Helper.showConfirm(this, "Remove from Favourites", "Remove \"" + track.title + "\" from favourites?", "Remove", true, () -> {
+                track.isFavourite = false;
+                AudioDatabase.getInstance(this).toggleFavourite(track.id);
+                refreshDisplayedList();
+                Toast.makeText(this, "Removed from favourites", Toast.LENGTH_SHORT).show();
+            });
         } else {
             track.isFavourite = true;
             AudioDatabase.getInstance(this).toggleFavourite(track.id);
@@ -635,41 +647,28 @@ public class AudioListActivity extends AppCompatActivity
 
     private void handleDownloadAction(AudioTrack track) {
         if (track.isDownloaded) {
-            Helper.showConfirm(this, "Delete Download",
-                    "Delete \"" + track.title + "\" from your device?",
-                    "Delete", true, () -> {
-                        PlaybackManager pm = PlaybackManager.getInstance();
-                        if (track.id.equals(pm.getCurrentMediaId())) {
-                            pm.stopAndClear();
-                        }
-
-                        DownloadHelper.delete(this, track.id);
-
-                        track.isDownloaded = false;
-                        track.localPath = null;
-                        track.downloadState = AudioTrack.STATE_NOT_DOWNLOADED;
-
-                        AudioDatabase.getInstance(this).markNotDownloaded(track.id);
-
-                        refreshDisplayedList();
-                        Toast.makeText(this, "Download deleted", Toast.LENGTH_SHORT).show();
-                    });
+            Helper.showConfirm(this, "Delete Download", "Delete \"" + track.title + "\" from your device?", "Delete", true, () -> {
+                PlaybackManager pm = PlaybackManager.getInstance();
+                if (track.id.equals(pm.getCurrentMediaId())) pm.stopAndClear();
+                DownloadHelper.delete(this, track.id);
+                track.isDownloaded = false;
+                track.localPath = null;
+                track.downloadState = AudioTrack.STATE_NOT_DOWNLOADED;
+                AudioDatabase.getInstance(this).markNotDownloaded(track.id);
+                refreshDisplayedList();
+                Toast.makeText(this, "Download deleted", Toast.LENGTH_SHORT).show();
+            });
         } else {
             if (track.downloadState == AudioTrack.STATE_DOWNLOADING) {
                 Toast.makeText(this, "Already downloading…", Toast.LENGTH_SHORT).show();
                 return;
             }
-
             track.downloadState = AudioTrack.STATE_DOWNLOADING;
             refreshDisplayedList();
             DownloadHelper.enqueue(this, track);
             Toast.makeText(this, "Downloading…", Toast.LENGTH_SHORT).show();
         }
     }
-
-    // ═══════════════════════════════════════════════════════════
-    // PLAYLIST DIALOGS
-    // ═══════════════════════════════════════════════════════════
 
     private void showCreatePlaylistDialog(AudioTrack trackToAdd) {
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_playlist_name, null);
@@ -680,24 +679,18 @@ public class AudioListActivity extends AppCompatActivity
                 .setView(view)
                 .setPositiveButton("Create", (dialog, which) -> {
                     String name = Helper.sanitizePlaylistName(etName.getText().toString());
-
                     if (name.isEmpty()) {
                         Toast.makeText(this, "Playlist name cannot be empty", Toast.LENGTH_SHORT).show();
                         return;
                     }
-
                     Helper.createPlaylist(this, name);
-
                     if (trackToAdd != null) {
                         Helper.addToPlaylist(this, name, trackToAdd.id);
                         Toast.makeText(this, "Added to \"" + name + "\"", Toast.LENGTH_SHORT).show();
                     } else {
                         Toast.makeText(this, "Playlist created", Toast.LENGTH_SHORT).show();
                     }
-
-                    if (currentFilter == FILTER_PLAYLISTS && selectedPlaylist == null) {
-                        refreshPlaylists();
-                    }
+                    if (currentFilter == FILTER_PLAYLISTS && selectedPlaylist == null) refreshPlaylists();
                     updateBottomBar();
                 })
                 .setNegativeButton("Cancel", null)
@@ -706,34 +699,22 @@ public class AudioListActivity extends AppCompatActivity
 
     private void showAddToPlaylistDialog(AudioTrack track) {
         if (track == null) return;
-
         Map<String, List<String>> playlists = Helper.getPlaylists(this);
         List<String> names = new ArrayList<>(playlists.keySet());
-
-        if (names.isEmpty()) {
-            showCreatePlaylistDialog(track);
-            return;
-        }
-
+        if (names.isEmpty()) { showCreatePlaylistDialog(track); return; }
         names.add("+ Create new playlist");
 
         new AlertDialog.Builder(this)
                 .setTitle("Add to Playlist")
                 .setItems(names.toArray(new String[0]), (dialog, which) -> {
-                    if (which == names.size() - 1) {
-                        showCreatePlaylistDialog(track);
-                    } else {
-                        String selected = names.get(which);
-                        Helper.addToPlaylist(this, selected, track.id);
-                        Toast.makeText(this, "Added to \"" + selected + "\"", Toast.LENGTH_SHORT).show();
+                    if (which == names.size() - 1) showCreatePlaylistDialog(track);
+                    else {
+                        Helper.addToPlaylist(this, names.get(which), track.id);
+                        Toast.makeText(this, "Added to \"" + names.get(which) + "\"", Toast.LENGTH_SHORT).show();
                     }
                 })
                 .show();
     }
-
-    // ═══════════════════════════════════════════════════════════
-    // PlaylistAdapter.OnPlaylistAction
-    // ═══════════════════════════════════════════════════════════
 
     @Override
     public void onPlaylistClick(String name) {
@@ -743,32 +724,22 @@ public class AudioListActivity extends AppCompatActivity
 
     @Override
     public void onPlaylistDelete(String name) {
-        Helper.showConfirm(this, "Delete Playlist",
-                "Delete playlist \"" + name + "\"?",
-                "Delete", true, () -> {
-                    Helper.deletePlaylist(this, name);
-                    refreshPlaylists();
-                    updateBottomBar();
-                    Toast.makeText(this, "Playlist deleted", Toast.LENGTH_SHORT).show();
-                });
+        Helper.showConfirm(this, "Delete Playlist", "Delete playlist \"" + name + "\"?", "Delete", true, () -> {
+            Helper.deletePlaylist(this, name);
+            refreshPlaylists();
+            updateBottomBar();
+            Toast.makeText(this, "Playlist deleted", Toast.LENGTH_SHORT).show();
+        });
     }
-
-    // ═══════════════════════════════════════════════════════════
-    // AudioAdapter.OnTrackAction
-    // ═══════════════════════════════════════════════════════════
 
     @Override
     public void onRowClick(AudioTrack track, int position) {
         PlaybackManager pm = PlaybackManager.getInstance();
         pm.connect(this);
-
-        String currentId = pm.getCurrentMediaId();
-
-        if (track.id != null && track.id.equals(currentId)) {
+        if (track.id != null && track.id.equals(pm.getCurrentMediaId())) {
             openPlayer();
             return;
         }
-
         pm.playList(displayedTracks, position);
         openPlayer();
     }
@@ -777,14 +748,8 @@ public class AudioListActivity extends AppCompatActivity
     public void onPlayPauseClick(AudioTrack track, int position) {
         PlaybackManager pm = PlaybackManager.getInstance();
         pm.connect(this);
-
-        String currentId = pm.getCurrentMediaId();
-
-        if (track.id != null && track.id.equals(currentId)) {
-            pm.playPause();
-        } else {
-            pm.playList(displayedTracks, position);
-        }
+        if (track.id != null && track.id.equals(pm.getCurrentMediaId())) pm.playPause();
+        else pm.playList(displayedTracks, position);
     }
 
     @Override
@@ -793,29 +758,24 @@ public class AudioListActivity extends AppCompatActivity
     }
 
     // ═══════════════════════════════════════════════════════════
-    // PLAYER SHEET BLUR BACKGROUND
+    // PLAYER SHEET BLUR
     // ═══════════════════════════════════════════════════════════
 
     private void applySheetBlur(float p) {
         p = Math.max(0f, Math.min(1f, p));
         sheetBlur = p;
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (p <= 0.02f) {
-                contentView.setRenderEffect(null);
-            } else {
+            if (p <= 0.02f) contentView.setRenderEffect(null);
+            else {
                 float radius = Math.min(90f, 35f * p * getResources().getDisplayMetrics().density);
-                contentView.setRenderEffect(
-                        RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.CLAMP));
+                contentView.setRenderEffect(RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.CLAMP));
             }
         }
-
         dimOverlay.setAlpha(0.45f * p);
     }
 
     private void animateSheetBlur(float target) {
         if (blurAnim != null) blurAnim.cancel();
-
         blurAnim = ValueAnimator.ofFloat(sheetBlur, target);
         blurAnim.setDuration(260);
         blurAnim.addUpdateListener(a -> applySheetBlur((float) a.getAnimatedValue()));
@@ -829,15 +789,13 @@ public class AudioListActivity extends AppCompatActivity
     }
 
     // ═══════════════════════════════════════════════════════════
-    // LIFECYCLE
+    // LIFECYCLE & SMART BACK BUTTON
     // ═══════════════════════════════════════════════════════════
 
     private void requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-                    != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this,
-                        new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIFICATION);
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIFICATION);
             }
         }
     }
@@ -848,14 +806,23 @@ public class AudioListActivity extends AppCompatActivity
         SheetBus.setListener(this);
         if (MusicPlayerActivity.isSheetOpen) applySheetBlur(1f);
 
-        PlaybackManager.getInstance().connect(this);
-        PlaybackManager.getInstance().addListener(playbackListener);
+        PlaybackManager pm = PlaybackManager.getInstance();
+        pm.connect(this);
+        // addListener automatically triggers onStateChanged with current state,
+        // ensuring the mini player persists when returning from MainActivity
+        pm.addListener(playbackListener);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         refreshDisplayedList();
+
+        PlaybackManager pm = PlaybackManager.getInstance();
+        String currentId = pm.getCurrentMediaId();
+        if (currentId != null && !currentId.isEmpty() && miniPlayer.getVisibility() == View.GONE) {
+            updateMiniPlayer(true, "Bhajan Audio", currentId);
+        }
     }
 
     @Override
@@ -868,27 +835,31 @@ public class AudioListActivity extends AppCompatActivity
     @Override
     protected void onDestroy() {
         super.onDestroy();
-
-        try {
-            unregisterReceiver(downloadReceiver);
-        } catch (Exception ignored) {
-        }
-
+        try { unregisterReceiver(downloadReceiver); } catch (Exception ignored) {}
         if (connectivityManager != null && networkCallback != null) {
-            try {
-                connectivityManager.unregisterNetworkCallback(networkCallback);
-            } catch (Exception ignored) {
-            }
+            try { connectivityManager.unregisterNetworkCallback(networkCallback); } catch (Exception ignored) {}
         }
     }
 
     @Override
     public void onBackPressed() {
+        // Smart back button: step out of playlist view first
         if (selectedPlaylist != null) {
             selectedPlaylist = null;
+            currentFilter = FILTER_PLAYLISTS;
+            updateFilterIcons();
             refreshDisplayedList();
             return;
         }
+
+        // Smart back button: return to "All" tab first, then exit
+        if (currentFilter != FILTER_ALL) {
+            currentFilter = FILTER_ALL;
+            updateFilterIcons();
+            refreshDisplayedList();
+            return;
+        }
+
         super.onBackPressed();
     }
 }
