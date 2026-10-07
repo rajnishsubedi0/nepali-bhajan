@@ -29,9 +29,6 @@ public class BatteryHelper {
         return c.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 
-    // ---------- Status ----------
-
-    /** True if the app is already allowed to ignore battery optimizations. */
     public static boolean isExempt(Context c) {
         try {
             PowerManager pm = (PowerManager) c.getSystemService(Context.POWER_SERVICE);

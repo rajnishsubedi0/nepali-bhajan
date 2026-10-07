@@ -4,12 +4,9 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
-import android.content.Intent;
-import android.net.Uri;
-import android.os.Build;
-import android.os.PowerManager;
-import android.provider.Settings;
+import android.text.TextUtils;
 
+import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
@@ -17,8 +14,6 @@ import androidx.media3.common.Player;
 import androidx.media3.session.MediaController;
 import androidx.media3.session.SessionToken;
 
-
-import com.google.common.util.concurrent.ListenableFuture;
 import com.rkant.bhajanapp.model.AudioTrack;
 import com.rkant.bhajanapp.service.BhajanMediaService;
 
@@ -27,167 +22,454 @@ import java.util.List;
 
 public class PlaybackManager {
 
-    /** Simple callback interface so Activities don't depend on Media3 API details. */
     public interface Listener {
-        void onStateChanged(boolean isPlaying, String title, String mediaId);
-        void onProgress(long position, long duration);
+        default void onStateChanged(boolean isPlaying, String title, String mediaId) {}
+        default void onProgress(long position, long duration) {}
         default void onModesChanged(boolean shuffle, int repeatMode) {}
+        default void onTimerChanged(long remainingMs) {}
     }
 
-    private static PlaybackManager instance;
-    private MediaController controller;
-    private ListenableFuture<MediaController> future;
-    private final List<Listener> listeners = new ArrayList<>();
-    private final Handler handler = new Handler(Looper.getMainLooper());
+    private interface ControllerAction {
+        void run(MediaController controller);
+    }
 
-    private final Player.Listener playerListener = new Player.Listener() {
-        @Override public void onIsPlayingChanged(boolean isPlaying) { notifyState(); }
-        @Override public void onPlaybackStateChanged(int state) { notifyState(); }
-        @Override public void onMediaItemTransition(MediaItem item, int reason) { notifyState(); }
-        @Override public void onMediaMetadataChanged(MediaMetadata meta) { notifyState(); }
-        @Override public void onShuffleModeEnabledChanged(boolean b) { notifyModes(); }
-        @Override public void onRepeatModeChanged(int mode) { notifyModes(); }
-    };
+    private static volatile PlaybackManager instance;
 
-    private final Runnable ticker = new Runnable() {
-        @Override public void run() {
-            notifyProgress();
-            if (controller != null && controller.isPlaying()) handler.postDelayed(this, 500);
+    public static PlaybackManager getInstance() {
+        if (instance == null) {
+            synchronized (PlaybackManager.class) {
+                if (instance == null) {
+                    instance = new PlaybackManager();
+                }
+            }
         }
-    };
-
-    public static synchronized PlaybackManager getInstance() {
-        if (instance == null) instance = new PlaybackManager();
         return instance;
     }
 
-    /** Idempotent. Safe to call from any Activity. */
-    public void connect(Context context) {
-        if (controller != null) return;
-        Context appCtx = context.getApplicationContext();
-        SessionToken token = new SessionToken(appCtx, new ComponentName(appCtx, BhajanMediaService.class));
-        future = new MediaController.Builder(appCtx, token).buildAsync();
-        future.addListener(() -> {
-            try {
-                controller = future.get();
-                controller.addListener(playerListener);
-                notifyState();
+    private Context appContext;
+    private MediaController controller;
+    private androidx.media3.session.MediaController.Builder builder;
+    private com.google.common.util.concurrent.ListenableFuture<MediaController> controllerFuture;
+
+    private final List<Listener> listeners = new ArrayList<>();
+    private final List<ControllerAction> pendingActions = new ArrayList<>();
+    private final Handler handler = new Handler(Looper.getMainLooper());
+
+    private float playbackSpeed = 1.0f;
+
+    private boolean lastPlaying = false;
+    private String lastMediaId = null;
+    private String lastTitle = null;
+
+    private long sleepEndTime = -1;
+    private Runnable sleepRunnable;
+
+    private final Player.Listener playerListener = new Player.Listener() {
+        @Override
+        public void onIsPlayingChanged(boolean isPlaying) {
+            notifyState();
+        }
+
+        @Override
+        public void onMediaItemTransition(@Nullable MediaItem mediaItem, int reason) {
+            notifyState();
+        }
+
+        @Override
+        public void onShuffleModeEnabledChanged(boolean shuffleModeEnabled) {
+            notifyModes();
+        }
+
+        @Override
+        public void onRepeatModeChanged(int repeatMode) {
+            notifyModes();
+        }
+    };
+
+    private final Runnable progressRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (controller != null) {
                 notifyProgress();
-                notifyModes();
-                startTickerIfPlaying();
-            } catch (Exception e) { e.printStackTrace(); }
-        }, ContextCompat.getMainExecutor(appCtx));
-    }
-
-    public void addListener(Listener l) {
-        if (!listeners.contains(l)) listeners.add(l);
-        notifyState(); notifyProgress(); notifyModes();
-    }
-
-    public void removeListener(Listener l) { listeners.remove(l); }
-    public static void requestBatteryExemption(Context context) {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
-                String pkg = context.getPackageName();
-                if (pm != null && !pm.isIgnoringBatteryOptimizations(pkg)) {
-                    Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
-                    intent.setData(Uri.parse("package:" + pkg));
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    context.startActivity(intent);
-                }
+                handler.postDelayed(this, 1000);
             }
-        } catch (Exception e) {
+        }
+    };
+
+    private PlaybackManager() {
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // CONNECTION
+    // ═══════════════════════════════════════════════════════════
+
+    public void connect(Context context) {
+        if (context != null && appContext == null) {
+            appContext = context.getApplicationContext();
+            loadPlaybackSpeed();
+        }
+
+        if (controllerFuture != null) return;
+        if (appContext == null) return;
+
+        SessionToken token = new SessionToken(
+                appContext,
+                new ComponentName(appContext, BhajanMediaService.class)
+        );
+
+        controllerFuture = new MediaController.Builder(appContext, token).buildAsync();
+
+        controllerFuture.addListener(() -> {
             try {
-                Intent intent = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                context.startActivity(intent);
-            } catch (Exception ignored) {}
+                controller = controllerFuture.get();
+                controller.addListener(playerListener);
+                controller.setPlaybackSpeed(playbackSpeed);
+
+                flushPendingActions();
+                startProgressLoop();
+                notifyModes();
+                notifyState();
+            } catch (Exception e) {
+                e.printStackTrace();
+                controllerFuture = null;
+            }
+        }, ContextCompat.getMainExecutor(appContext));
+    }
+
+    private void flushPendingActions() {
+        if (controller == null) return;
+
+        List<ControllerAction> copy = new ArrayList<>(pendingActions);
+        pendingActions.clear();
+
+        for (ControllerAction action : copy) {
+            try {
+                action.run(controller);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
-
-    // ----- Controls -----
-    public void playPause() {
-        if (controller == null) return;
-        if (controller.isPlaying()) controller.pause(); else controller.play();
+    private void startProgressLoop() {
+        handler.removeCallbacks(progressRunnable);
+        handler.post(progressRunnable);
     }
 
-    public void next() { if (controller != null) controller.seekToNext(); }
-    public void prev() { if (controller != null) controller.seekToPrevious(); }
-    public void seekTo(long pos) { if (controller != null) controller.seekTo(pos); }
-
-    public void toggleShuffle() {
-        if (controller != null) controller.setShuffleModeEnabled(!controller.getShuffleModeEnabled());
-    }
-
-    public void cycleRepeat() {
-        if (controller == null) return;
-        int next = (controller.getRepeatMode() + 1) % 3; // OFF -> ONE -> ALL -> OFF
-        controller.setRepeatMode(next);
-    }
-
-    /** Loads the whole list as a playlist and starts at the given index. */
-    public void playList(List<AudioTrack> tracks, int startIndex) {
-        if (controller == null || tracks == null || tracks.isEmpty()) return;
-        List<MediaItem> items = new ArrayList<>();
-        for (AudioTrack t : tracks) {
-            items.add(new MediaItem.Builder()
-                    .setUri(t.playableUrl())
-                    .setMediaId(t.id)
-                    .setMediaMetadata(new MediaMetadata.Builder().setTitle(t.title).build())
-                    .build());
-        }
-        int idx = Math.max(0, Math.min(startIndex, items.size() - 1));
-        controller.setMediaItems(items, idx, 0);
-        controller.prepare();
-        controller.play();
-    }
-
-    /** Stops playback and clears the queue (used by the Stop button). */
-    public void stopAndClear() {
+    private void runOnController(ControllerAction action) {
         if (controller != null) {
-            controller.stop();
-            controller.clearMediaItems();
+            try {
+                action.run(controller);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } else {
+            pendingActions.add(action);
+            if (appContext != null) {
+                connect(appContext);
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // LISTENERS
+    // ═══════════════════════════════════════════════════════════
+
+    public void addListener(Listener listener) {
+        if (listener == null) return;
+        if (!listeners.contains(listener)) {
+            listeners.add(listener);
         }
         notifyState();
+        notifyModes();
+        notifyTimer();
     }
 
-
-
-    public String getCurrentMediaId() {
-        if (controller == null || controller.getCurrentMediaItem() == null) return null;
-        return controller.getCurrentMediaItem().mediaId;
+    public void removeListener(Listener listener) {
+        listeners.remove(listener);
     }
 
     private void notifyState() {
         if (controller == null) return;
-        boolean playing = controller.isPlaying();
-        String title = "", id = "";
-        MediaItem item = controller.getCurrentMediaItem();
-        if (item != null) {
-            id = item.mediaId != null ? item.mediaId : "";
-            if (item.mediaMetadata.title != null) title = item.mediaMetadata.title.toString();
+
+        try {
+            boolean playing = controller.isPlaying();
+            MediaItem item = controller.getCurrentMediaItem();
+
+            String id = item != null ? item.mediaId : null;
+            String title = null;
+
+            if (item != null && item.mediaMetadata != null && item.mediaMetadata.title != null) {
+                title = item.mediaMetadata.title.toString();
+            }
+
+            boolean changed = playing != lastPlaying
+                    || !TextUtils.equals(id, lastMediaId)
+                    || !TextUtils.equals(title, lastTitle);
+
+            if (changed) {
+                lastPlaying = playing;
+                lastMediaId = id;
+                lastTitle = title;
+
+                for (Listener listener : new ArrayList<>(listeners)) {
+                    listener.onStateChanged(playing, title, id);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        for (Listener l : new ArrayList<>(listeners)) l.onStateChanged(playing, title, id);
-        startTickerIfPlaying();
+    }
+
+    private void notifyDirect(boolean playing, String title, String mediaId) {
+        lastPlaying = playing;
+        lastMediaId = mediaId;
+        lastTitle = title;
+
+        for (Listener listener : new ArrayList<>(listeners)) {
+            listener.onStateChanged(playing, title, mediaId);
+        }
     }
 
     private void notifyProgress() {
         if (controller == null) return;
-        long pos = controller.getCurrentPosition();
-        long dur = controller.getDuration();
-        for (Listener l : new ArrayList<>(listeners)) l.onProgress(pos, dur);
+
+        try {
+            long position = controller.getCurrentPosition();
+            long duration = controller.getDuration();
+
+            for (Listener listener : new ArrayList<>(listeners)) {
+                listener.onProgress(position, duration);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void notifyModes() {
         if (controller == null) return;
-        boolean sh = controller.getShuffleModeEnabled();
-        int rp = controller.getRepeatMode();
-        for (Listener l : new ArrayList<>(listeners)) l.onModesChanged(sh, rp);
+
+        try {
+            boolean shuffle = controller.getShuffleModeEnabled();
+            int repeatMode = controller.getRepeatMode();
+
+            for (Listener listener : new ArrayList<>(listeners)) {
+                listener.onModesChanged(shuffle, repeatMode);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
-    private void startTickerIfPlaying() {
-        handler.removeCallbacks(ticker);
-        if (controller != null && controller.isPlaying()) handler.post(ticker);
+    private void notifyTimer() {
+        long remaining = getSleepTimerRemaining();
+        for (Listener listener : new ArrayList<>(listeners)) {
+            listener.onTimerChanged(remaining);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // PLAYBACK
+    // ═══════════════════════════════════════════════════════════
+
+    public void playList(List<AudioTrack> tracks, int startIndex) {
+        if (tracks == null || tracks.isEmpty()) return;
+        if (startIndex < 0 || startIndex >= tracks.size()) return;
+
+        if (appContext != null) {
+            AudioTrack selected = tracks.get(startIndex);
+            if (selected != null) {
+                Helper.addAudioRecent(appContext, selected.id);
+            }
+        }
+
+        List<MediaItem> items = new ArrayList<>();
+        int adjustedIndex = 0;
+
+        for (int i = 0; i < tracks.size(); i++) {
+            AudioTrack track = tracks.get(i);
+            if (track == null) continue;
+
+            String url = track.playableUrl();
+            if (url == null || url.isEmpty()) continue;
+
+            if (i == startIndex) {
+                adjustedIndex = items.size();
+            }
+
+            MediaItem item = new MediaItem.Builder()
+                    .setMediaId(track.id)
+                    .setUri(url)
+                    .setMediaMetadata(
+                            new MediaMetadata.Builder()
+                                    .setTitle(track.title)
+                                    .build()
+                    )
+                    .build();
+
+            items.add(item);
+        }
+
+        if (items.isEmpty()) return;
+
+        final int finalIndex = Math.max(0, Math.min(adjustedIndex, items.size() - 1));
+
+        runOnController(c -> {
+            c.setMediaItems(items);
+            c.seekTo(finalIndex, 0);
+            c.prepare();
+            c.play();
+            c.setPlaybackSpeed(playbackSpeed);
+        });
+    }
+
+    public void playPause() {
+        runOnController(c -> {
+            if (c.isPlaying()) {
+                c.pause();
+            } else {
+                c.play();
+            }
+        });
+    }
+
+    public void next() {
+        runOnController(c -> {
+            c.seekToNext();
+        });
+    }
+
+    public void prev() {
+        runOnController(c -> {
+            c.seekToPrevious();
+        });
+    }
+
+    public void seekTo(long position) {
+        runOnController(c -> c.seekTo(position));
+    }
+
+    public void stopAndClear() {
+        cancelSleepTimer();
+
+        runOnController(c -> {
+            try {
+                c.stop();
+                c.setMediaItems(new ArrayList<MediaItem>());
+            } catch (Exception ignored) {
+            }
+        });
+
+        notifyDirect(false, null, null);
+    }
+
+    public String getCurrentMediaId() {
+        if (controller == null) return lastMediaId;
+
+        try {
+            MediaItem item = controller.getCurrentMediaItem();
+            return item != null ? item.mediaId : null;
+        } catch (Exception e) {
+            return lastMediaId;
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // SHUFFLE / REPEAT
+    // ═══════════════════════════════════════════════════════════
+
+    public void toggleShuffle() {
+        runOnController(c -> {
+            c.setShuffleModeEnabled(!c.getShuffleModeEnabled());
+        });
+        handler.post(this::notifyModes);
+    }
+
+    public void cycleRepeat() {
+        int current = controller != null ? controller.getRepeatMode() : Player.REPEAT_MODE_OFF;
+
+        int next;
+        if (current == Player.REPEAT_MODE_OFF) {
+            next = Player.REPEAT_MODE_ALL;
+        } else if (current == Player.REPEAT_MODE_ALL) {
+            next = Player.REPEAT_MODE_ONE;
+        } else {
+            next = Player.REPEAT_MODE_OFF;
+        }
+
+        runOnController(c -> c.setRepeatMode(next));
+        handler.post(this::notifyModes);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // PLAYBACK SPEED
+    // ═══════════════════════════════════════════════════════════
+
+    public float getPlaybackSpeed() {
+        return playbackSpeed;
+    }
+
+    public void setPlaybackSpeed(float speed) {
+        if (speed < 0.25f) speed = 0.25f;
+        if (speed > 3.0f) speed = 3.0f;
+
+        playbackSpeed = speed;
+        savePlaybackSpeed();
+
+        runOnController(c -> c.setPlaybackSpeed(playbackSpeed)); // ✅ FIXED
+    }
+
+    private void loadPlaybackSpeed() {
+        if (appContext == null) return;
+
+        playbackSpeed = appContext
+                .getSharedPreferences("bhajan_playback", Context.MODE_PRIVATE)
+                .getFloat("speed", 1.0f);
+    }
+
+    private void savePlaybackSpeed() {
+        if (appContext == null) return;
+
+        appContext.getSharedPreferences("bhajan_playback", Context.MODE_PRIVATE)
+                .edit()
+                .putFloat("speed", playbackSpeed)
+                .apply();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // SLEEP TIMER
+    // ═══════════════════════════════════════════════════════════
+
+    public void setSleepTimer(long milliseconds) {
+        cancelSleepTimer();
+
+        if (milliseconds <= 0) return;
+
+        sleepEndTime = System.currentTimeMillis() + milliseconds;
+
+        sleepRunnable = this::stopAndClear;
+        handler.postDelayed(sleepRunnable, milliseconds);
+
+        notifyTimer();
+    }
+
+    public void cancelSleepTimer() {
+        if (sleepRunnable != null) {
+            handler.removeCallbacks(sleepRunnable);
+            sleepRunnable = null;
+        }
+
+        boolean hadTimer = sleepEndTime != -1;
+        sleepEndTime = -1;
+
+        if (hadTimer) {
+            notifyTimer();
+        }
+    }
+
+    public long getSleepTimerRemaining() {
+        if (sleepEndTime == -1) return -1;
+
+        long remaining = sleepEndTime - System.currentTimeMillis();
+        return Math.max(remaining, -1);
     }
 }

@@ -3,51 +3,78 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg"
+    android:fitsSystemWindows="true"
     android:gravity="center_horizontal"
     android:orientation="vertical"
-    android:padding="24dp">
+    android:paddingHorizontal="24dp"
+    android:paddingTop="12dp"
+    android:paddingBottom="28dp">
 
+    <!-- Top bar: speed + sleep (left), download + favourite (right) -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="48dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <ImageView
-            android:id="@+id/btn_back"
-            android:layout_width="42dp"
-            android:layout_height="42dp"
+        <TextView
+            android:id="@+id/tv_speed"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:padding="9dp"
-            android:src="@drawable/ic_close"
-            android:tint="@color/text_primary" />
+            android:gravity="center"
+            android:minWidth="52dp"
+            android:paddingHorizontal="10dp"
+            android:text="1x"
+            android:textColor="@color/text_primary"
+            android:textSize="15sp"
+            android:textStyle="bold" />
 
-        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+        <TextView
+            android:id="@+id/tv_sleep"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:layout_marginStart="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:gravity="center"
+            android:minWidth="60dp"
+            android:paddingHorizontal="10dp"
+            android:text="Sleep"
+            android:textColor="@color/text_secondary"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
 
         <ImageView
-            android:id="@+id/btn_fav"
-            android:layout_width="42dp"
-            android:layout_height="42dp"
+            android:id="@+id/btn_download"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:padding="9dp"
-            android:src="@drawable/ic_heart_outline"
+            android:padding="12dp"
+            android:src="@drawable/ic_download"
             android:tint="@color/text_secondary" />
 
         <ImageView
-            android:id="@+id/btn_stop"
-            android:layout_width="42dp"
-            android:layout_height="42dp"
+            android:id="@+id/btn_fav"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="4dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:padding="9dp"
-            android:src="@drawable/ic_stop"
-            android:tint="@color/red" />
+            android:padding="12dp"
+            android:src="@drawable/ic_heart_outline"
+            android:tint="@color/text_secondary" />
     </LinearLayout>
 
     <ImageView
         android:layout_width="250dp"
         android:layout_height="250dp"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="16dp"
         android:background="@drawable/bg_card"
+        android:elevation="4dp"
         android:scaleType="centerCrop"
         android:src="@drawable/shiva_colorized" />
 
@@ -55,46 +82,56 @@
         android:id="@+id/tv_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
+        android:layout_marginTop="24dp"
+        android:ellipsize="end"
         android:gravity="center"
+        android:maxLines="2"
         android:text="Bhajan Title"
         android:textColor="@color/text_primary"
-        android:textSize="24sp"
+        android:textSize="22sp"
         android:textStyle="bold" />
+
+    <!-- Flexible spacer pushes seek bar + controls toward the bottom -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:minHeight="24dp" />
+
+    <SeekBar
+        android:id="@+id/seek_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:progressTint="@color/accent"
+        android:thumbTint="@color/accent" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="40dp"
-        android:orientation="vertical">
+        android:layout_marginTop="4dp"
+        android:orientation="horizontal"
+        android:paddingHorizontal="8dp">
 
-        <SeekBar
-            android:id="@+id/seek_bar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
+        <TextView
+            android:id="@+id/tv_current_time"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:paddingHorizontal="8dp">
+            android:text="00:00"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp" />
 
-            <TextView
-                android:id="@+id/tv_current_time"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="00:00"
-                android:textColor="@color/text_secondary" />
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
 
-            <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1" />
-
-            <TextView
-                android:id="@+id/tv_total_time"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="--:--"
-                android:textColor="@color/text_secondary" />
-        </LinearLayout>
+        <TextView
+            android:id="@+id/tv_total_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="--:--"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp" />
     </LinearLayout>
 
     <LinearLayout
@@ -106,44 +143,51 @@
 
         <ImageView
             android:id="@+id/btn_shuffle"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="46dp"
+            android:layout_height="46dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:padding="10dp"
             android:src="@drawable/ic_shuffle"
             android:tint="@color/text_secondary" />
 
         <ImageView
             android:id="@+id/btn_prev"
-            android:layout_width="64dp"
-            android:layout_height="64dp"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_marginStart="10dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:padding="12dp"
             android:src="@drawable/ic_skip_previous"
             android:tint="@color/text_primary" />
 
         <ImageView
             android:id="@+id/btn_play_pause"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
-            android:layout_marginHorizontal="16dp"
+            android:layout_width="84dp"
+            android:layout_height="84dp"
+            android:layout_marginHorizontal="18dp"
             android:background="@drawable/bg_button_accent"
-            android:padding="16dp"
+            android:padding="18dp"
             android:src="@drawable/ic_play_arrow"
             android:tint="@color/on_accent" />
 
         <ImageView
             android:id="@+id/btn_next"
-            android:layout_width="64dp"
-            android:layout_height="64dp"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_marginEnd="10dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:padding="12dp"
             android:src="@drawable/ic_skip_next"
             android:tint="@color/text_primary" />
 
         <ImageView
             android:id="@+id/btn_repeat"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="46dp"
+            android:layout_height="46dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:padding="10dp"
             android:src="@drawable/ic_repeat"
             android:tint="@color/text_secondary" />
     </LinearLayout>
+
 </LinearLayout>

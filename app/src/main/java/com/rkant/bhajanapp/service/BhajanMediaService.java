@@ -27,6 +27,7 @@ import androidx.media3.session.MediaSessionService;
 import com.rkant.bhajanapp.R;
 import com.rkant.bhajanapp.ui.MusicPlayerActivity;
 
+@UnstableApi
 public class BhajanMediaService extends MediaSessionService {
 
     private ExoPlayer exoPlayer;

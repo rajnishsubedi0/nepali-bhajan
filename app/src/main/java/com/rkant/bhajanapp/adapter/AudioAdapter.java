@@ -19,14 +19,16 @@ import java.util.List;
 public class AudioAdapter extends RecyclerView.Adapter<AudioAdapter.VH> {
 
     public interface OnTrackAction {
-        void onPlayClick(AudioTrack track, int position);
-        void onDownloadClick(AudioTrack track);
-        void onFavClick(AudioTrack track);
+        void onRowClick(AudioTrack track, int position);
+
+        void onPlayPauseClick(AudioTrack track, int position);
+
+        void onOptionsClick(AudioTrack track, int position);
     }
 
-    private List<AudioTrack> tracks;
-    private Context ctx;
-    private OnTrackAction listener;
+    private final List<AudioTrack> tracks;
+    private final Context ctx;
+    private final OnTrackAction listener;
     private String currentPlayingId = null;
     private boolean isPlaying = false;
 
@@ -50,56 +52,69 @@ public class AudioAdapter extends RecyclerView.Adapter<AudioAdapter.VH> {
 
     @Override
     public void onBindViewHolder(@NonNull VH h, int position) {
-        AudioTrack t = tracks.get(position);
-        h.title.setText(t.title);
+        AudioTrack track = tracks.get(position);
 
-        if (t.durationSec > 0) h.duration.setText(Helper.formatTime(t.durationSec * 1000L));
-        else h.duration.setText("--:--");
+        h.title.setText(track.title);
 
-        // Favourite state from track object (persisted in database)
-        h.fav.setVisibility(View.VISIBLE);
-        if (t.isFavourite) {
-            h.fav.setImageResource(R.drawable.ic_heart_filled);
-            h.fav.setColorFilter(ctx.getColor(R.color.red));
+        if (track.durationSec > 0) {
+            h.duration.setText(Helper.formatTime(track.durationSec * 1000L));
         } else {
-            h.fav.setImageResource(R.drawable.ic_heart_outline);
-            h.fav.setColorFilter(ctx.getColor(R.color.text_secondary));
+            h.duration.setText("--:--");
         }
 
-        // Download state icon
-        if (t.isDownloaded) {
-            h.download.setImageResource(R.drawable.ic_check);
-            h.download.setColorFilter(ctx.getColor(R.color.accent));
-        } else if (t.downloadState == AudioTrack.STATE_DOWNLOADING) {
-            h.download.setImageResource(R.drawable.ic_download);
-            h.download.setColorFilter(ctx.getColor(R.color.accent));
+        // Passive favourite indicator (not a button)
+        h.favInd.setVisibility(track.isFavourite ? View.VISIBLE : View.GONE);
+
+        // Passive download indicator (not a button)
+        if (track.isDownloaded) {
+            h.dlInd.setVisibility(View.VISIBLE);
+            h.dlInd.setImageResource(R.drawable.ic_check);
+            h.dlInd.setColorFilter(ctx.getColor(R.color.accent));
+        } else if (track.downloadState == AudioTrack.STATE_DOWNLOADING) {
+            h.dlInd.setVisibility(View.VISIBLE);
+            h.dlInd.setImageResource(R.drawable.ic_download);
+            h.dlInd.setColorFilter(ctx.getColor(R.color.accent));
         } else {
-            h.download.setImageResource(R.drawable.ic_download);
-            h.download.setColorFilter(ctx.getColor(R.color.text_secondary));
+            h.dlInd.setVisibility(View.GONE);
         }
 
-        boolean isThis = t.id.equals(currentPlayingId);
-        h.row.setBackgroundColor(isThis ? ctx.getColor(R.color.muted) : 0x00000000);
+        boolean isThisTrack = track.id != null && track.id.equals(currentPlayingId);
 
-        if (isThis) {
-            h.play.setImageResource(isPlaying ? R.drawable.ic_equalizer : R.drawable.ic_play_arrow);
+        h.row.setBackgroundColor(isThisTrack ? ctx.getColor(R.color.muted) : 0x00000000);
+
+        if (isThisTrack) {
+            h.play.setImageResource(isPlaying ? R.drawable.ic_pause : R.drawable.ic_play_arrow);
             h.play.setColorFilter(ctx.getColor(R.color.accent));
         } else {
             h.play.setImageResource(R.drawable.ic_play_arrow);
             h.play.setColorFilter(ctx.getColor(R.color.text_secondary));
         }
 
-        h.row.setOnClickListener(v -> listener.onPlayClick(t, h.getAdapterPosition()));
-        h.download.setOnClickListener(v -> listener.onDownloadClick(t));
-        h.fav.setOnClickListener(v -> listener.onFavClick(t));
+        h.row.setOnClickListener(v -> {
+            int pos = h.getAdapterPosition();
+            if (pos != RecyclerView.NO_POSITION) listener.onRowClick(track, pos);
+        });
+
+        h.row.setOnLongClickListener(v -> {
+            int pos = h.getAdapterPosition();
+            if (pos != RecyclerView.NO_POSITION) listener.onOptionsClick(track, pos);
+            return true;
+        });
+
+        h.play.setOnClickListener(v -> {
+            int pos = h.getAdapterPosition();
+            if (pos != RecyclerView.NO_POSITION) listener.onPlayPauseClick(track, pos);
+        });
     }
 
     @Override
-    public int getItemCount() { return tracks.size(); }
+    public int getItemCount() {
+        return tracks == null ? 0 : tracks.size();
+    }
 
     static class VH extends RecyclerView.ViewHolder {
         TextView title, duration;
-        ImageView fav, download, play;
+        ImageView favInd, dlInd, play;
         View row;
 
         VH(View v) {
@@ -107,8 +122,8 @@ public class AudioAdapter extends RecyclerView.Adapter<AudioAdapter.VH> {
             row = v.findViewById(R.id.row);
             title = v.findViewById(R.id.tv_title);
             duration = v.findViewById(R.id.tv_duration);
-            fav = v.findViewById(R.id.iv_fav);
-            download = v.findViewById(R.id.iv_download);
+            favInd = v.findViewById(R.id.iv_fav_ind);
+            dlInd = v.findViewById(R.id.iv_dl_ind);
             play = v.findViewById(R.id.iv_play);
         }
     }
