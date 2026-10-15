@@ -21,6 +21,9 @@ import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
+import android.content.res.ColorStateList;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -46,6 +49,7 @@ import com.rkant.bhajanapp.utils.AudioDatabase;
 import com.rkant.bhajanapp.utils.AudioRepository;
 import com.rkant.bhajanapp.utils.BatteryHelper;
 import com.rkant.bhajanapp.utils.DownloadHelper;
+import com.rkant.bhajanapp.utils.BottomNav;
 import com.rkant.bhajanapp.utils.Helper;
 import com.rkant.bhajanapp.utils.PlaybackManager;
 import com.rkant.bhajanapp.utils.SheetBus;
@@ -81,7 +85,8 @@ public class AudioListActivity extends AppCompatActivity
     private boolean isSyncing = false;
     private boolean currentlyPlaying = false;
 
-    private ImageView filterAll, filterFav, filterDownload, filterRecent, filterPlaylist;
+    private TextView filterAll, filterFav, filterDownload, filterRecent, filterPlaylist;
+    private String audioQuery = "";
     private View bottomBar, btnClearRecent, btnNewPlaylist;
     private TextView tvAudioCount;
 
@@ -159,8 +164,10 @@ public class AudioListActivity extends AppCompatActivity
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Helper.applyTheme(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_audio_list);
+        BottomNav.setup(this, 1);
 
         requestNotificationPermission();
         BatteryHelper.showGuideIfNeeded(this);
@@ -195,6 +202,19 @@ public class AudioListActivity extends AppCompatActivity
         filterRecent.setOnClickListener(v -> setFilter(FILTER_RECENT));
         filterPlaylist.setOnClickListener(v -> setFilter(FILTER_PLAYLISTS));
 
+        EditText etAudioSearch = findViewById(R.id.et_audio_search);
+        View btnAudioSearchClear = findViewById(R.id.btn_audio_search_clear);
+        etAudioSearch.addTextChangedListener(new TextWatcher() {
+            public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
+            public void onTextChanged(CharSequence s, int a, int b, int c) {
+                audioQuery = s.toString().trim().toLowerCase();
+                btnAudioSearchClear.setVisibility(s.length() > 0 ? View.VISIBLE : View.GONE);
+                refreshDisplayedList();
+            }
+            public void afterTextChanged(Editable s) {}
+        });
+        btnAudioSearchClear.setOnClickListener(v -> etAudioSearch.setText(""));
+
         btnClearRecent.setOnClickListener(v -> Helper.showConfirm(
                 this,
                 "Clear Recent",
@@ -226,7 +246,7 @@ public class AudioListActivity extends AppCompatActivity
     // ═══════════════════════════════════════════════════════════
 
     private void setFilter(int filter) {
-        currentFilter = (currentFilter == filter) ? FILTER_ALL : filter;
+        currentFilter = filter;
         selectedPlaylist = null;
         updateFilterIcons();
         refreshDisplayedList();
@@ -240,22 +260,13 @@ public class AudioListActivity extends AppCompatActivity
         styleFilterIcon(filterPlaylist, currentFilter == FILTER_PLAYLISTS, false, R.drawable.ic_playlist);
     }
 
-    private void styleFilterIcon(ImageView v, boolean selected, boolean isFav, int defaultIcon) {
-        if (selected) {
-            // Changed from bg_icon_selected to bg_tab_selected for a rounded rectangle look
-            v.setBackgroundResource(R.drawable.bg_tab_selected);
-            if (isFav) {
-                v.setImageResource(R.drawable.ic_heart_filled);
-                v.setColorFilter(getColor(R.color.red));
-            } else {
-                v.setColorFilter(getColor(R.color.accent));
-            }
-        } else {
-            v.setBackgroundResource(android.R.color.transparent);
-            if (isFav) v.setImageResource(R.drawable.ic_heart_outline);
-            else v.setImageResource(defaultIcon);
-            v.setColorFilter(getColor(R.color.text_secondary));
-        }
+    private void styleFilterIcon(TextView v, boolean selected, boolean isFav, int defaultIcon) {
+        int icon = (selected && isFav) ? R.drawable.ic_heart_filled : defaultIcon;
+        int color = getColor(selected ? R.color.on_accent : R.color.text_secondary);
+        v.setBackgroundResource(selected ? R.drawable.bg_chip_selected : R.drawable.bg_pill);
+        v.setCompoundDrawablesRelativeWithIntrinsicBounds(icon, 0, 0, 0);
+        v.setCompoundDrawableTintList(ColorStateList.valueOf(color));
+        v.setTextColor(color);
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -400,6 +411,14 @@ public class AudioListActivity extends AppCompatActivity
             }
         } else {
             displayedTracks.addAll(allTracks);
+        }
+
+        if (!audioQuery.isEmpty()) {
+            java.util.Iterator<AudioTrack> it = displayedTracks.iterator();
+            while (it.hasNext()) {
+                AudioTrack t = it.next();
+                if (t.title == null || !t.title.toLowerCase().contains(audioQuery)) it.remove();
+            }
         }
 
         audioAdapter.notifyDataSetChanged();

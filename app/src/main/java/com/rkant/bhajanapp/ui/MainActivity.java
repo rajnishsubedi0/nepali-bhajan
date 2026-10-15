@@ -25,6 +25,7 @@ import com.rkant.bhajanapp.R;
 import com.rkant.bhajanapp.adapter.BhajanAdapter;
 import com.rkant.bhajanapp.adapter.CategoryAdapter;
 import com.rkant.bhajanapp.model.Bhajan;
+import com.rkant.bhajanapp.utils.BottomNav;
 import com.rkant.bhajanapp.utils.Helper;
 import com.rkant.bhajanapp.utils.PlaybackManager;
 
@@ -100,15 +101,9 @@ public class MainActivity extends AppCompatActivity {
         rvList.setLayoutManager(new LinearLayoutManager(this));
         rvList.setAdapter(adapter);
 
-        findViewById(R.id.btn_settings).setOnClickListener(v ->
-                startActivity(new Intent(this, SettingsActivity.class)));
-
-        // Audio player entry point
-        btnAudio = findViewById(R.id.btn_audio);
-        if (btnAudio != null) {
-            btnAudio.setOnClickListener(v ->
-                    startActivity(new Intent(this, AudioListActivity.class)));
-        }
+        // Bottom navigation; the Audio icon pulses while music plays
+        btnAudio = findViewById(R.id.nav_audio_icon);
+        BottomNav.setup(this, 0);
 
         TabLayout tabs = findViewById(R.id.tabs);
         tabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
@@ -175,6 +170,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onStop() {
         super.onStop();
         PlaybackManager.getInstance().removeListener(playbackListener);
+        if (pulseAnim != null) pulseAnim.cancel();
+        if (btnAudio != null) { btnAudio.setScaleX(1f); btnAudio.setScaleY(1f); }
     }
 
     @Override

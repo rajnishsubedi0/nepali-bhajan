@@ -13,7 +13,7 @@
         android:orientation="vertical"
         android:paddingHorizontal="24dp"
         android:paddingTop="12dp"
-        android:paddingBottom="28dp">
+        android:paddingBottom="20dp">
 
         <!-- Top bar: speed + sleep (left), download + favourite (right) -->
         <LinearLayout
@@ -75,11 +75,14 @@
         </LinearLayout>
 
         <ImageView
-            android:layout_width="250dp"
-            android:layout_height="250dp"
-            android:layout_marginTop="16dp"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_marginVertical="16dp"
+            android:layout_weight="1"
+            android:adjustViewBounds="true"
             android:background="@drawable/bg_card"
             android:elevation="4dp"
+            android:maxWidth="300dp"
             android:scaleType="centerCrop"
             android:src="@drawable/shiva_colorized" />
 
@@ -87,7 +90,6 @@
             android:id="@+id/tv_title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
             android:ellipsize="end"
             android:gravity="center"
             android:maxLines="2"
@@ -99,9 +101,7 @@
         <!-- Flexible spacer pushes controls toward the bottom -->
         <View
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:minHeight="24dp" />
+            android:layout_height="16dp" />
 
         <SeekBar
             android:id="@+id/seek_bar"
