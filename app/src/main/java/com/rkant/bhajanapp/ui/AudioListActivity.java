@@ -64,22 +64,22 @@ public class AudioListActivity extends AppCompatActivity
         implements AudioAdapter.OnTrackAction, PlaylistAdapter.OnPlaylistAction, SheetBus.Listener {
 
     private static final int REQ_NOTIFICATION = 1001;
-
     private static final int FILTER_ALL = 0;
     private static final int FILTER_FAV = 1;
     private static final int FILTER_DOWNLOADS = 2;
     private static final int FILTER_RECENT = 3;
     private static final int FILTER_PLAYLISTS = 4;
 
+    // Increased threshold so mini player doesn't dismiss too easily
+    private static final float MINI_PLAYER_SWIPE_THRESHOLD = 350f;
+    private static final float MINI_PLAYER_SWIPE_ALPHA_RANGE = 600f;
+
     private RecyclerView recyclerView;
     private AudioAdapter audioAdapter;
     private PlaylistAdapter playlistAdapter;
-
     private final List<AudioTrack> allTracks = new ArrayList<>();
     private final List<AudioTrack> displayedTracks = new ArrayList<>();
-
     private SwipeRefreshLayout swipeRefresh;
-
     private int currentFilter = FILTER_ALL;
     private String selectedPlaylist = null;
     private boolean isSyncing = false;
@@ -89,18 +89,15 @@ public class AudioListActivity extends AppCompatActivity
     private String audioQuery = "";
     private View bottomBar, btnClearRecent, btnNewPlaylist;
     private TextView tvAudioCount;
-
     private View miniPlayer;
     private TextView miniTitle;
     private ProgressBar miniProgress;
     private ImageView miniPlay;
-
     private View contentView;
     private View dimOverlay;
     private ValueAnimator blurAnim;
     private float sheetBlur = 0f;
 
-    // Swipe to dismiss mini player
     private float downX = 0;
     private boolean isSwiping = false;
 
@@ -113,9 +110,7 @@ public class AudioListActivity extends AppCompatActivity
         public void onStateChanged(boolean isPlaying, String title, String mediaId) {
             currentlyPlaying = isPlaying;
             updateMiniPlayer(isPlaying, title, mediaId);
-            if (audioAdapter != null) {
-                audioAdapter.setPlaybackState(mediaId, isPlaying);
-            }
+            if (audioAdapter != null) audioAdapter.setPlaybackState(mediaId, isPlaying);
         }
 
         @Override
@@ -131,30 +126,23 @@ public class AudioListActivity extends AppCompatActivity
         @Override
         public void onReceive(Context context, Intent intent) {
             if (!DownloadManager.ACTION_DOWNLOAD_COMPLETE.equals(intent.getAction())) return;
-
             long downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
             String trackId = DownloadHelper.trackIdForDownload(AudioListActivity.this, downloadId);
-
             if (trackId == null) return;
-
             for (AudioTrack track : allTracks) {
                 if (track.id.equals(trackId)) {
                     File file = DownloadHelper.getLocalFile(AudioListActivity.this, trackId);
-
                     if (file != null && file.exists()) {
                         track.isDownloaded = true;
                         track.downloadState = AudioTrack.STATE_DOWNLOADED;
                         track.localPath = file.getAbsolutePath();
-
                         AudioDatabase.getInstance(AudioListActivity.this)
                                 .markDownloaded(trackId, file.getAbsolutePath());
-
                         Toast.makeText(AudioListActivity.this, "Downloaded: " + track.title, Toast.LENGTH_SHORT).show();
                     } else {
                         track.downloadState = AudioTrack.STATE_NOT_DOWNLOADED;
                         Toast.makeText(AudioListActivity.this, "Download failed", Toast.LENGTH_SHORT).show();
                     }
-
                     refreshDisplayedList();
                     break;
                 }
@@ -174,7 +162,6 @@ public class AudioListActivity extends AppCompatActivity
 
         recyclerView = findViewById(R.id.rv_audio_list);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-
         audioAdapter = new AudioAdapter(displayedTracks, this, this);
         playlistAdapter = new PlaylistAdapter(this, this);
         recyclerView.setAdapter(audioAdapter);
@@ -184,7 +171,6 @@ public class AudioListActivity extends AppCompatActivity
 
         contentView = findViewById(R.id.audio_content);
         dimOverlay = findViewById(R.id.dim_overlay);
-
         bottomBar = findViewById(R.id.bottom_bar);
         tvAudioCount = findViewById(R.id.tv_audio_count);
         btnClearRecent = findViewById(R.id.btn_clear_recent);
@@ -204,6 +190,7 @@ public class AudioListActivity extends AppCompatActivity
 
         EditText etAudioSearch = findViewById(R.id.et_audio_search);
         View btnAudioSearchClear = findViewById(R.id.btn_audio_search_clear);
+
         etAudioSearch.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
             public void onTextChanged(CharSequence s, int a, int b, int c) {
@@ -216,12 +203,8 @@ public class AudioListActivity extends AppCompatActivity
         btnAudioSearchClear.setOnClickListener(v -> etAudioSearch.setText(""));
 
         btnClearRecent.setOnClickListener(v -> Helper.showConfirm(
-                this,
-                "Clear Recent",
-                "Remove all recently played audio from the Recent list?",
-                "Clear",
-                true,
-                () -> {
+                this, "Clear Recent", "Remove all recently played audio from the Recent list?",
+                "Clear", true, () -> {
                     Helper.clearAudioRecents(this);
                     refreshDisplayedList();
                     Toast.makeText(this, "Recent cleared", Toast.LENGTH_SHORT).show();
@@ -234,16 +217,11 @@ public class AudioListActivity extends AppCompatActivity
         setupNetworkMonitor();
         updateFilterIcons();
         updateBottomBar();
-
         loadAudios(false);
 
         IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
         ContextCompat.registerReceiver(this, downloadReceiver, filter, ContextCompat.RECEIVER_EXPORTED);
     }
-
-    // ═══════════════════════════════════════════════════════════
-    // FILTERS (5 tabs)
-    // ═══════════════════════════════════════════════════════════
 
     private void setFilter(int filter) {
         currentFilter = filter;
@@ -269,14 +247,9 @@ public class AudioListActivity extends AppCompatActivity
         v.setTextColor(color);
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // LOAD / SYNC
-    // ═══════════════════════════════════════════════════════════
-
     private void loadAudios(boolean showSpinner) {
         if (showSpinner) swipeRefresh.setRefreshing(true);
         isSyncing = true;
-
         AudioRepository.loadTracks(this, new AudioRepository.LoadCallback() {
             @Override
             public void onTracksLoaded(List<AudioTrack> tracks, boolean fromNetwork) {
@@ -286,14 +259,12 @@ public class AudioListActivity extends AppCompatActivity
                     refreshDisplayedList();
                 });
             }
-
             @Override
             public void onError(String message) {
                 runOnUiThread(() -> {
                     if (showSpinner) Toast.makeText(AudioListActivity.this, message, Toast.LENGTH_SHORT).show();
                 });
             }
-
             @Override
             public void onComplete() {
                 runOnUiThread(() -> {
@@ -307,7 +278,6 @@ public class AudioListActivity extends AppCompatActivity
     private void syncFromNetwork() {
         if (isSyncing) return;
         isSyncing = true;
-
         AudioRepository.syncFromNetwork(this, new AudioRepository.LoadCallback() {
             @Override
             public void onTracksLoaded(List<AudioTrack> tracks, boolean fromNetwork) {
@@ -318,10 +288,7 @@ public class AudioListActivity extends AppCompatActivity
                     if (fromNetwork) Toast.makeText(AudioListActivity.this, "Audio list updated", Toast.LENGTH_SHORT).show();
                 });
             }
-
-            @Override
-            public void onError(String message) {}
-
+            @Override public void onError(String message) {}
             @Override
             public void onComplete() {
                 runOnUiThread(() -> {
@@ -344,45 +311,29 @@ public class AudioListActivity extends AppCompatActivity
                     }, 1000);
                 }
             }
-
             @Override
-            public void onLost(@NonNull Network network) {
-                wasOffline = true;
-            }
+            public void onLost(@NonNull Network network) { wasOffline = true; }
         };
-
         NetworkRequest request = new NetworkRequest.Builder()
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                 .build();
-
-        try {
-            connectivityManager.registerNetworkCallback(request, networkCallback);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
+        try { connectivityManager.registerNetworkCallback(request, networkCallback); }
+        catch (Exception e) { e.printStackTrace(); }
         wasOffline = !AudioRepository.isNetworkAvailable(this);
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // LISTS
-    // ═══════════════════════════════════════════════════════════
-
     private void refreshDisplayedList() {
         if (currentFilter == FILTER_PLAYLISTS && selectedPlaylist == null) {
-            if (recyclerView.getAdapter() != playlistAdapter) {
-                recyclerView.setAdapter(playlistAdapter);
-            }
+            if (recyclerView.getAdapter() != playlistAdapter) recyclerView.setAdapter(playlistAdapter);
             refreshPlaylists();
             updateBottomBar();
             return;
         }
 
-        if (recyclerView.getAdapter() != audioAdapter) {
-            recyclerView.setAdapter(audioAdapter);
-        }
+        if (recyclerView.getAdapter() != audioAdapter) recyclerView.setAdapter(audioAdapter);
 
         displayedTracks.clear();
+        int recentLimit = Helper.getAudioRecentLimit(this);
 
         if (currentFilter == FILTER_FAV) {
             for (AudioTrack t : allTracks) if (t.isFavourite) displayedTracks.add(t);
@@ -390,7 +341,7 @@ public class AudioListActivity extends AppCompatActivity
             for (AudioTrack t : allTracks) if (t.isDownloaded) displayedTracks.add(t);
         } else if (currentFilter == FILTER_RECENT) {
             List<String> recentIds = Helper.getAudioRecentIds(this);
-            if (recentIds.size() > 10) recentIds = recentIds.subList(0, 10);
+            if (recentIds.size() > recentLimit) recentIds = recentIds.subList(0, recentLimit);
             for (String id : recentIds) {
                 for (AudioTrack t : allTracks) {
                     if (t.id.equals(id)) { displayedTracks.add(t); break; }
@@ -399,11 +350,7 @@ public class AudioListActivity extends AppCompatActivity
         } else if (currentFilter == FILTER_PLAYLISTS && selectedPlaylist != null) {
             Map<String, List<String>> playlists = Helper.getPlaylists(this);
             List<String> ids = playlists.get(selectedPlaylist);
-            if (ids == null) {
-                selectedPlaylist = null;
-                refreshDisplayedList();
-                return;
-            }
+            if (ids == null) { selectedPlaylist = null; refreshDisplayedList(); return; }
             for (String id : ids) {
                 for (AudioTrack t : allTracks) {
                     if (t.id.equals(id)) { displayedTracks.add(t); break; }
@@ -429,9 +376,7 @@ public class AudioListActivity extends AppCompatActivity
         Map<String, List<String>> playlists = Helper.getPlaylists(this);
         List<String> names = new ArrayList<>(playlists.keySet());
         Map<String, Integer> counts = new HashMap<>();
-        for (String name : names) {
-            counts.put(name, playlists.get(name).size());
-        }
+        for (String name : names) counts.put(name, playlists.get(name).size());
         playlistAdapter.update(names, counts);
     }
 
@@ -440,7 +385,6 @@ public class AudioListActivity extends AppCompatActivity
         boolean playlistView = currentFilter == FILTER_PLAYLISTS && selectedPlaylist == null;
         boolean downloadView = currentFilter == FILTER_DOWNLOADS;
         boolean show = recentView || playlistView || downloadView;
-
         bottomBar.setVisibility(show ? View.VISIBLE : View.GONE);
 
         if (show) {
@@ -454,52 +398,42 @@ public class AudioListActivity extends AppCompatActivity
 
         btnClearRecent.setVisibility(recentView ? View.VISIBLE : View.GONE);
         btnNewPlaylist.setVisibility(playlistView ? View.VISIBLE : View.GONE);
-
         updateMiniMargin();
     }
-
-    // ═══════════════════════════════════════════════════════════
-    // FLOATING MINI PLAYER (Swipe + Stop + Persistence)
-    // ═══════════════════════════════════════════════════════════
 
     private void setupMiniPlayer() {
         miniPlayer = findViewById(R.id.mini_player);
         miniTitle = findViewById(R.id.mini_title);
         miniProgress = findViewById(R.id.mini_progress);
         miniPlay = findViewById(R.id.mini_play);
-
         ImageView miniPrev = findViewById(R.id.mini_prev);
         ImageView miniNext = findViewById(R.id.mini_next);
         ImageView miniStop = findViewById(R.id.mini_stop);
 
-        // Handle both swipe and tap in one place to prevent conflicts
         miniPlayer.setOnTouchListener((v, event) -> {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
                     downX = event.getRawX();
                     isSwiping = false;
-                    return true; // Consume DOWN to block OnClickListener from firing later
-
+                    return true;
                 case MotionEvent.ACTION_MOVE:
                     float moveDx = event.getRawX() - downX;
                     if (Math.abs(moveDx) > 10) {
                         isSwiping = true;
                         miniPlayer.setTranslationX(moveDx);
-                        miniPlayer.setAlpha(1 - Math.min(1, Math.abs(moveDx) / 300f));
+                        miniPlayer.setAlpha(1 - Math.min(1, Math.abs(moveDx) / MINI_PLAYER_SWIPE_ALPHA_RANGE));
                     }
                     return true;
-
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
                     if (isSwiping) {
                         float upDx = event.getRawX() - downX;
-                        if (Math.abs(upDx) > 150) {
-                            stopAndHideMiniPlayer(upDx > 0 ? 500 : -500);
+                        if (Math.abs(upDx) > MINI_PLAYER_SWIPE_THRESHOLD) {
+                            stopAndHideMiniPlayer(upDx > 0 ? 700 : -700);
                         } else {
                             miniPlayer.animate().translationX(0).alpha(1).setDuration(200).start();
                         }
                     } else {
-                        // It was a clean tap, not a swipe
                         openPlayer();
                     }
                     downX = 0;
@@ -517,18 +451,14 @@ public class AudioListActivity extends AppCompatActivity
 
     private void updateMiniPlayer(boolean isPlaying, String title, String mediaId) {
         if (mediaId == null || mediaId.isEmpty()) {
-            if (miniPlayer.getVisibility() != View.GONE) {
-                miniPlayer.setVisibility(View.GONE);
-            }
+            if (miniPlayer.getVisibility() != View.GONE) miniPlayer.setVisibility(View.GONE);
             return;
         }
-
         if (miniPlayer.getVisibility() != View.VISIBLE) {
             miniPlayer.setVisibility(View.VISIBLE);
             miniPlayer.setTranslationX(0);
             miniPlayer.setAlpha(1);
         }
-
         miniTitle.setText(title != null && !title.isEmpty() ? title : "Bhajan Audio");
         miniPlay.setImageResource(isPlaying ? R.drawable.ic_pause : R.drawable.ic_play_arrow);
         updateMiniMargin();
@@ -549,7 +479,6 @@ public class AudioListActivity extends AppCompatActivity
         boolean barVisible = bottomBar.getVisibility() == View.VISIBLE;
         int bottomMargin = (int) ((barVisible ? 80 + 56 : 80) * density);
         int sideMargin = (int) (14 * density);
-
         FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) miniPlayer.getLayoutParams();
         lp.bottomMargin = bottomMargin;
         lp.leftMargin = sideMargin;
@@ -561,10 +490,6 @@ public class AudioListActivity extends AppCompatActivity
         animateSheetBlur(1f);
         startActivity(new Intent(this, MusicPlayerActivity.class));
     }
-
-    // ═══════════════════════════════════════════════════════════
-    // TRACK OPTIONS BOTTOM SHEET
-    // ═══════════════════════════════════════════════════════════
 
     private void showTrackOptions(AudioTrack track) {
         if (track == null) return;
@@ -593,7 +518,7 @@ public class AudioListActivity extends AppCompatActivity
             sheetStatus.setText("Downloaded");
             sheetStatus.setTextColor(getColor(R.color.accent));
         } else if (track.downloadState == AudioTrack.STATE_DOWNLOADING) {
-            sheetStatus.setText("Downloading…");
+            sheetStatus.setText("Downloading\u2026");
             sheetStatus.setTextColor(getColor(R.color.accent));
         } else {
             sheetStatus.setText("Not downloaded");
@@ -612,20 +537,19 @@ public class AudioListActivity extends AppCompatActivity
 
         if (track.isFavourite) {
             sheetFav.setText("Remove from Favourites");
-            sheetFav.setTextColor(getColor(R.color.red));
+            sheetFav.setTextColor(getColor(R.color.accent));
         } else {
             sheetFav.setText("Add to Favourites");
             sheetFav.setTextColor(getColor(R.color.text_primary));
         }
         sheetFav.setOnClickListener(x -> { dialog.dismiss(); toggleFavourite(track); });
-
         sheetPlaylist.setOnClickListener(x -> { dialog.dismiss(); showAddToPlaylistDialog(track); });
 
         if (track.isDownloaded) {
             sheetDownload.setText("Delete Download");
-            sheetDownload.setTextColor(getColor(R.color.red));
+            sheetDownload.setTextColor(getColor(R.color.accent));
         } else if (track.downloadState == AudioTrack.STATE_DOWNLOADING) {
-            sheetDownload.setText("Downloading…");
+            sheetDownload.setText("Downloading\u2026");
             sheetDownload.setTextColor(getColor(R.color.text_secondary));
         } else {
             sheetDownload.setText("Download");
@@ -679,20 +603,19 @@ public class AudioListActivity extends AppCompatActivity
             });
         } else {
             if (track.downloadState == AudioTrack.STATE_DOWNLOADING) {
-                Toast.makeText(this, "Already downloading…", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Already downloading\u2026", Toast.LENGTH_SHORT).show();
                 return;
             }
             track.downloadState = AudioTrack.STATE_DOWNLOADING;
             refreshDisplayedList();
             DownloadHelper.enqueue(this, track);
-            Toast.makeText(this, "Downloading…", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Downloading\u2026", Toast.LENGTH_SHORT).show();
         }
     }
 
     private void showCreatePlaylistDialog(AudioTrack trackToAdd) {
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_playlist_name, null);
         EditText etName = view.findViewById(R.id.et_playlist_name);
-
         new AlertDialog.Builder(this)
                 .setTitle("New Playlist")
                 .setView(view)
@@ -722,7 +645,6 @@ public class AudioListActivity extends AppCompatActivity
         List<String> names = new ArrayList<>(playlists.keySet());
         if (names.isEmpty()) { showCreatePlaylistDialog(track); return; }
         names.add("+ Create new playlist");
-
         new AlertDialog.Builder(this)
                 .setTitle("Add to Playlist")
                 .setItems(names.toArray(new String[0]), (dialog, which) -> {
@@ -736,10 +658,7 @@ public class AudioListActivity extends AppCompatActivity
     }
 
     @Override
-    public void onPlaylistClick(String name) {
-        selectedPlaylist = name;
-        refreshDisplayedList();
-    }
+    public void onPlaylistClick(String name) { selectedPlaylist = name; refreshDisplayedList(); }
 
     @Override
     public void onPlaylistDelete(String name) {
@@ -755,10 +674,7 @@ public class AudioListActivity extends AppCompatActivity
     public void onRowClick(AudioTrack track, int position) {
         PlaybackManager pm = PlaybackManager.getInstance();
         pm.connect(this);
-        if (track.id != null && track.id.equals(pm.getCurrentMediaId())) {
-            openPlayer();
-            return;
-        }
+        if (track.id != null && track.id.equals(pm.getCurrentMediaId())) { openPlayer(); return; }
         pm.playList(displayedTracks, position);
         openPlayer();
     }
@@ -772,13 +688,7 @@ public class AudioListActivity extends AppCompatActivity
     }
 
     @Override
-    public void onOptionsClick(AudioTrack track, int position) {
-        showTrackOptions(track);
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // PLAYER SHEET BLUR
-    // ═══════════════════════════════════════════════════════════
+    public void onOptionsClick(AudioTrack track, int position) { showTrackOptions(track); }
 
     private void applySheetBlur(float p) {
         p = Math.max(0f, Math.min(1f, p));
@@ -807,10 +717,6 @@ public class AudioListActivity extends AppCompatActivity
         applySheetBlur(openProgress);
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // LIFECYCLE & SMART BACK BUTTON
-    // ═══════════════════════════════════════════════════════════
-
     private void requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -824,11 +730,8 @@ public class AudioListActivity extends AppCompatActivity
         super.onStart();
         SheetBus.setListener(this);
         if (MusicPlayerActivity.isSheetOpen) applySheetBlur(1f);
-
         PlaybackManager pm = PlaybackManager.getInstance();
         pm.connect(this);
-        // addListener automatically triggers onStateChanged with current state,
-        // ensuring the mini player persists when returning from MainActivity
         pm.addListener(playbackListener);
     }
 
@@ -836,7 +739,6 @@ public class AudioListActivity extends AppCompatActivity
     protected void onResume() {
         super.onResume();
         refreshDisplayedList();
-
         PlaybackManager pm = PlaybackManager.getInstance();
         String currentId = pm.getCurrentMediaId();
         if (currentId != null && !currentId.isEmpty() && miniPlayer.getVisibility() == View.GONE) {
@@ -862,7 +764,6 @@ public class AudioListActivity extends AppCompatActivity
 
     @Override
     public void onBackPressed() {
-        // Smart back button: step out of playlist view first
         if (selectedPlaylist != null) {
             selectedPlaylist = null;
             currentFilter = FILTER_PLAYLISTS;
@@ -870,15 +771,12 @@ public class AudioListActivity extends AppCompatActivity
             refreshDisplayedList();
             return;
         }
-
-        // Smart back button: return to "All" tab first, then exit
         if (currentFilter != FILTER_ALL) {
             currentFilter = FILTER_ALL;
             updateFilterIcons();
             refreshDisplayedList();
             return;
         }
-
         super.onBackPressed();
     }
 }

@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <com.rkant.bhajanapp.ui.SheetDragLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/sheet_root"
     android:layout_width="match_parent"
@@ -16,7 +15,7 @@
         android:paddingTop="12dp"
         android:paddingBottom="20dp">
 
-        <!-- Top bar: speed + sleep (left), download + favourite (right) -->
+        <!-- Top bar: speed + sleep (left), close + download + favourite (right) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="48dp"
@@ -75,6 +74,18 @@
                 android:padding="12dp"
                 android:src="@drawable/ic_heart_outline"
                 android:tint="@color/text_secondary" />
+
+            <!-- Close button (X) -->
+            <ImageView
+                android:id="@+id/btn_close_player"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Close player"
+                android:padding="12dp"
+                android:src="@drawable/ic_close"
+                android:tint="@color/text_secondary" />
         </LinearLayout>
 
         <ImageView
@@ -102,7 +113,6 @@
             android:textSize="22sp"
             android:textStyle="bold" />
 
-        <!-- Flexible spacer pushes controls toward the bottom -->
         <View
             android:layout_width="match_parent"
             android:layout_height="16dp" />
@@ -201,7 +211,5 @@
                 android:src="@drawable/ic_repeat"
                 android:tint="@color/text_secondary" />
         </LinearLayout>
-
     </LinearLayout>
-
 </com.rkant.bhajanapp.ui.SheetDragLayout>

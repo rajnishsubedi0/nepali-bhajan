@@ -43,8 +43,7 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
 
     private TextView tvTitle, tvCurrentTime, tvTotalTime, tvSpeed, tvSleep;
     private SeekBar seekBar;
-    private ImageView btnPlayPause, btnShuffle, btnRepeat, btnFav, btnDownload;
-
+    private ImageView btnPlayPause, btnShuffle, btnRepeat, btnFav, btnDownload, btnClose;
     private boolean isTracking = false;
     private String currentMediaId = null;
     private AudioTrack currentTrack = null;
@@ -71,9 +70,7 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
         @Override
         public void onStateChanged(boolean isPlaying, String title, String mediaId) {
             if (title != null && !title.isEmpty()) tvTitle.setText(title);
-
             btnPlayPause.setImageResource(isPlaying ? R.drawable.ic_pause : R.drawable.ic_play_arrow);
-
             if (mediaId != null && !mediaId.equals(currentMediaId)) {
                 currentMediaId = mediaId;
                 Helper.addAudioRecent(MusicPlayerActivity.this, mediaId);
@@ -85,15 +82,12 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
         @Override
         public void onProgress(long position, long duration) {
             boolean seekable = duration > 0 && duration != C.TIME_UNSET;
-
             tvTotalTime.setText(Helper.formatTime(duration));
             seekBar.setEnabled(seekable);
-
             if (seekable && !isTracking) {
                 seekBar.setMax((int) duration);
                 seekBar.setProgress((int) position);
             }
-
             tvCurrentTime.setText(Helper.formatTime(position));
         }
 
@@ -122,14 +116,13 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
         tvTotalTime = findViewById(R.id.tv_total_time);
         tvSpeed = findViewById(R.id.tv_speed);
         tvSleep = findViewById(R.id.tv_sleep);
-
         seekBar = findViewById(R.id.seek_bar);
-
         btnPlayPause = findViewById(R.id.btn_play_pause);
         btnShuffle = findViewById(R.id.btn_shuffle);
         btnRepeat = findViewById(R.id.btn_repeat);
         btnFav = findViewById(R.id.btn_fav);
         btnDownload = findViewById(R.id.btn_download);
+        btnClose = findViewById(R.id.btn_close_player);
 
         ImageView btnPrev = findViewById(R.id.btn_prev);
         ImageView btnNext = findViewById(R.id.btn_next);
@@ -139,20 +132,19 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
         btnNext.setOnClickListener(v -> PlaybackManager.getInstance().next());
         btnShuffle.setOnClickListener(v -> PlaybackManager.getInstance().toggleShuffle());
         btnRepeat.setOnClickListener(v -> PlaybackManager.getInstance().cycleRepeat());
-
         tvSpeed.setOnClickListener(v -> cyclePlaybackSpeed());
         tvSleep.setOnClickListener(v -> showSleepTimerDialog());
 
+        // Close button (X) at top right
+        btnClose.setOnClickListener(v -> performClose());
+
         btnFav.setOnClickListener(v -> {
             if (currentMediaId == null) return;
-
             AudioDatabase db = AudioDatabase.getInstance(this);
             boolean isCurrentlyFav = db.isFavourite(currentMediaId);
-
             if (isCurrentlyFav) {
                 Helper.showConfirm(this, "Remove from Favourites",
-                        "Remove this bhajan from favourites?",
-                        "Remove", true, () -> {
+                        "Remove this bhajan from favourites?", "Remove", true, () -> {
                             db.toggleFavourite(currentMediaId);
                             updateFavButton();
                             Toast.makeText(this, "Removed from favourites", Toast.LENGTH_SHORT).show();
@@ -169,34 +161,26 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
                 Toast.makeText(this, "Track information not available yet", Toast.LENGTH_SHORT).show();
                 return;
             }
-
             if (currentTrack.isDownloaded) {
                 Helper.showConfirm(this, "Delete Download",
-                        "Delete \"" + currentTrack.title + "\" from your device?",
-                        "Delete", true, () -> {
+                        "Delete \"" + currentTrack.title + "\" from your device?", "Delete", true, () -> {
                             PlaybackManager pm = PlaybackManager.getInstance();
-                            if (currentTrack.id.equals(pm.getCurrentMediaId())) {
-                                pm.stopAndClear();
-                            }
-
+                            if (currentTrack.id.equals(pm.getCurrentMediaId())) pm.stopAndClear();
                             DownloadHelper.delete(this, currentTrack.id);
-
                             currentTrack.isDownloaded = false;
                             currentTrack.localPath = null;
                             currentTrack.downloadState = AudioTrack.STATE_NOT_DOWNLOADED;
-
                             AudioDatabase.getInstance(this).markNotDownloaded(currentTrack.id);
-
                             updateDownloadButton();
                             Toast.makeText(this, "Download deleted", Toast.LENGTH_SHORT).show();
                         });
             } else if (currentTrack.downloadState == AudioTrack.STATE_DOWNLOADING) {
-                Toast.makeText(this, "Already downloading…", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Already downloading\u2026", Toast.LENGTH_SHORT).show();
             } else {
                 currentTrack.downloadState = AudioTrack.STATE_DOWNLOADING;
                 updateDownloadButton();
                 DownloadHelper.enqueue(this, currentTrack);
-                Toast.makeText(this, "Downloading…", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Downloading\u2026", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -206,51 +190,37 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
                 if (fromUser) PlaybackManager.getInstance().seekTo(progress);
                 tvCurrentTime.setText(Helper.formatTime(progress));
             }
-
             @Override
-            public void onStartTrackingTouch(SeekBar bar) {
-                isTracking = true;
-            }
-
+            public void onStartTrackingTouch(SeekBar bar) { isTracking = true; }
             @Override
-            public void onStopTrackingTouch(SeekBar bar) {
-                isTracking = false;
-            }
+            public void onStopTrackingTouch(SeekBar bar) { isTracking = false; }
         });
 
         IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
         ContextCompat.registerReceiver(this, downloadReceiver, filter, ContextCompat.RECEIVER_EXPORTED);
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // DRAG TO DISMISS (bottom-sheet behavior)
-    // ═══════════════════════════════════════════════════════════
-
-    private float clamp01(float v) {
-        return Math.max(0f, Math.min(1f, v));
-    }
+    // ── Drag to dismiss ──────────────────────────────────────────
+    private float clamp01(float v) { return Math.max(0f, Math.min(1f, v)); }
 
     @Override
     public void onSheetDrag(float fraction) {
         if (closing) return;
-
         float height = Math.max(1, sheetRoot.getHeight());
         sheetRoot.setTranslationY(fraction * height);
-
         float scale = 1f - 0.06f * fraction;
         sheetRoot.setPivotX(sheetRoot.getWidth() / 2f);
         sheetRoot.setPivotY(0f);
         sheetRoot.setScaleX(scale);
         sheetRoot.setScaleY(scale);
-
         SheetBus.emit(1f - fraction);
     }
 
     @Override
     public void onSheetRelease(float fraction, float velocityY) {
         if (closing) return;
-
-        if (fraction > 0.35f || velocityY > 1500f) {
+        // Reduced threshold from 0.35 to 0.18 for easier dismiss
+        if (fraction > 0.18f || velocityY > 1000f) {
             performClose();
         } else {
             springBack();
@@ -260,19 +230,16 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
     private void springBack() {
         float from = sheetRoot.getTranslationY();
         float height = Math.max(1, sheetRoot.getHeight());
-
         ValueAnimator va = ValueAnimator.ofFloat(from, 0f);
         va.setDuration(220);
         va.setInterpolator(new DecelerateInterpolator());
         va.addUpdateListener(a -> {
             float v = (float) a.getAnimatedValue();
             sheetRoot.setTranslationY(v);
-
             float f = clamp01(v / height);
             float scale = 1f - 0.06f * f;
             sheetRoot.setScaleX(scale);
             sheetRoot.setScaleY(scale);
-
             SheetBus.emit(1f - f);
         });
         va.start();
@@ -282,22 +249,18 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
         if (closing) return;
         closing = true;
         sheetRoot.setDragCallback(null);
-
         float from = sheetRoot.getTranslationY();
         float to = Math.max(1, sheetRoot.getHeight());
-
         ValueAnimator va = ValueAnimator.ofFloat(from, to);
         va.setDuration(230);
         va.setInterpolator(new AccelerateInterpolator());
         va.addUpdateListener(a -> {
             float v = (float) a.getAnimatedValue();
             sheetRoot.setTranslationY(v);
-
             float f = clamp01(v / to);
             float scale = 1f - 0.06f * f;
             sheetRoot.setScaleX(scale);
             sheetRoot.setScaleY(scale);
-
             SheetBus.emit(1f - f);
         });
         va.addListener(new android.animation.AnimatorListenerAdapter() {
@@ -319,23 +282,15 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
         super.onBackPressed();
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // CURRENT TRACK (download button)
-    // ═══════════════════════════════════════════════════════════
-
+    // ── Current track / download ─────────────────────────────────
     private void loadCurrentTrack() {
         final String id = currentMediaId;
-        if (id == null) {
-            btnDownload.setVisibility(View.GONE);
-            return;
-        }
-
+        if (id == null) { btnDownload.setVisibility(View.GONE); return; }
         AudioRepository.loadTracks(this, new AudioRepository.LoadCallback() {
             @Override
             public void onTracksLoaded(List<AudioTrack> tracks, boolean fromNetwork) {
                 runOnUiThread(() -> {
                     if (!id.equals(currentMediaId)) return;
-
                     for (AudioTrack t : tracks) {
                         if (t.id.equals(id)) {
                             currentTrack = t;
@@ -345,25 +300,14 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
                     }
                 });
             }
-
-            @Override
-            public void onError(String message) {
-            }
-
-            @Override
-            public void onComplete() {
-            }
+            @Override public void onError(String message) {}
+            @Override public void onComplete() {}
         });
     }
 
     private void updateDownloadButton() {
-        if (currentTrack == null) {
-            btnDownload.setVisibility(View.GONE);
-            return;
-        }
-
+        if (currentTrack == null) { btnDownload.setVisibility(View.GONE); return; }
         btnDownload.setVisibility(View.VISIBLE);
-
         if (currentTrack.isDownloaded) {
             btnDownload.setImageResource(R.drawable.ic_check);
             btnDownload.setColorFilter(getColor(R.color.accent));
@@ -376,26 +320,16 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
         }
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // SPEED / SLEEP / REPEAT / FAV
-    // ═══════════════════════════════════════════════════════════
-
+    // ── Speed / Sleep / Repeat / Fav ─────────────────────────────
     private void cyclePlaybackSpeed() {
         float[] speeds = {0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f};
-
         float current = PlaybackManager.getInstance().getPlaybackSpeed();
         int index = 0;
-
         for (int i = 0; i < speeds.length; i++) {
-            if (Math.abs(speeds[i] - current) < 0.01f) {
-                index = i;
-                break;
-            }
+            if (Math.abs(speeds[i] - current) < 0.01f) { index = i; break; }
         }
-
         float next = speeds[(index + 1) % speeds.length];
         PlaybackManager.getInstance().setPlaybackSpeed(next);
-
         updateSpeedLabel();
         Toast.makeText(this, "Speed: " + speedLabel(next), Toast.LENGTH_SHORT).show();
     }
@@ -405,20 +339,16 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
     }
 
     private String speedLabel(float speed) {
-        if (Math.abs(speed - Math.round(speed)) < 0.001f) {
-            return Math.round(speed) + "x";
-        }
+        if (Math.abs(speed - Math.round(speed)) < 0.001f) return Math.round(speed) + "x";
         return speed + "x";
     }
 
     private void showSleepTimerDialog() {
         String[] options = {"Off", "5 minutes", "15 minutes", "30 minutes", "45 minutes", "60 minutes"};
-
         new AlertDialog.Builder(this)
                 .setTitle("Sleep Timer")
                 .setItems(options, (dialog, which) -> {
                     PlaybackManager pm = PlaybackManager.getInstance();
-
                     if (which == 0) {
                         pm.cancelSleepTimer();
                         Toast.makeText(this, "Sleep timer off", Toast.LENGTH_SHORT).show();
@@ -429,11 +359,9 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
                         else if (which == 3) minutes = 30;
                         else if (which == 4) minutes = 45;
                         else minutes = 60;
-
                         pm.setSleepTimer(minutes * 60000L);
                         Toast.makeText(this, "Sleep timer: " + minutes + " minutes", Toast.LENGTH_SHORT).show();
                     }
-
                     updateSleepTimerLabel();
                 })
                 .show();
@@ -441,14 +369,12 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
 
     private void updateSleepTimerLabel() {
         long remaining = PlaybackManager.getInstance().getSleepTimerRemaining();
-
         if (remaining <= 0) {
             tvSleep.setText("Sleep");
             tvSleep.setTextColor(getColor(R.color.text_secondary));
         } else {
             long minutes = (remaining + 59999) / 60000;
             if (minutes <= 0) minutes = 1;
-
             tvSleep.setText(minutes + "m");
             tvSleep.setTextColor(getColor(R.color.accent));
         }
@@ -469,12 +395,10 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
 
     private void updateFavButton() {
         if (currentMediaId == null) return;
-
         boolean isFav = AudioDatabase.getInstance(this).isFavourite(currentMediaId);
-
         if (isFav) {
             btnFav.setImageResource(R.drawable.ic_heart_filled);
-            btnFav.setColorFilter(getColor(R.color.red));
+            btnFav.setColorFilter(getColor(R.color.accent));
         } else {
             btnFav.setImageResource(R.drawable.ic_heart_outline);
             btnFav.setColorFilter(getColor(R.color.text_secondary));
@@ -485,17 +409,13 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
     protected void onStart() {
         super.onStart();
         isSheetOpen = true;
-
         PlaybackManager.getInstance().connect(this);
         PlaybackManager.getInstance().addListener(playbackListener);
-
         currentMediaId = PlaybackManager.getInstance().getCurrentMediaId();
-
         updateFavButton();
         updateSpeedLabel();
         updateSleepTimerLabel();
         loadCurrentTrack();
-
         uiHandler.removeCallbacks(sleepTick);
         uiHandler.postDelayed(sleepTick, 10000);
     }
@@ -504,7 +424,6 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
     protected void onStop() {
         super.onStop();
         isSheetOpen = false;
-
         PlaybackManager.getInstance().removeListener(playbackListener);
         uiHandler.removeCallbacks(sleepTick);
     }
@@ -512,9 +431,6 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        try {
-            unregisterReceiver(downloadReceiver);
-        } catch (Exception ignored) {
-        }
+        try { unregisterReceiver(downloadReceiver); } catch (Exception ignored) {}
     }
 }

@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root"
     android:layout_width="match_parent"
@@ -35,6 +34,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical">
+
                     <TextView
                         android:id="@+id/tv_greeting"
                         android:layout_width="wrap_content"
@@ -42,6 +42,7 @@
                         android:textColor="@color/accent"
                         android:textSize="15sp"
                         android:textStyle="bold" />
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -50,6 +51,7 @@
                         android:textColor="@color/text_primary"
                         android:textSize="28sp"
                         android:textStyle="bold" />
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -71,7 +73,7 @@
                     android:tint="@color/accent" />
             </LinearLayout>
 
-            <!-- Search entry (opens Library with the keyboard up) -->
+            <!-- Search entry -->
             <LinearLayout
                 android:id="@+id/search_box"
                 android:layout_width="match_parent"
@@ -83,12 +85,14 @@
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:paddingStart="16dp"
-                android:paddingEnd="8dp">
+                android:paddingEnd="16dp">
+
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
                     android:src="@drawable/ic_search"
                     android:tint="@color/text_secondary" />
+
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -97,15 +101,6 @@
                     android:text="Search bhajans"
                     android:textColor="@color/text_secondary"
                     android:textSize="16sp" />
-                <ImageView
-                    android:id="@+id/btn_filter"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="@drawable/bg_square_accent"
-                    android:contentDescription="Browse library"
-                    android:padding="10dp"
-                    android:src="@drawable/ic_tune"
-                    android:tint="@color/on_accent" />
             </LinearLayout>
 
             <!-- Bhajan of the day -->
@@ -119,6 +114,7 @@
                 android:background="@drawable/bg_gradient_primary"
                 android:foreground="?attr/selectableItemBackground"
                 android:visibility="gone">
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -126,14 +122,16 @@
                     android:layout_marginEnd="14dp"
                     android:alpha="0.16"
                     android:includeFontPadding="false"
-                    android:text="ॐ"
+                    android:text="\u0950"
                     android:textColor="@color/on_gradient"
                     android:textSize="120sp" />
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:padding="22dp">
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -143,6 +141,7 @@
                         android:textColor="@color/on_gradient"
                         android:textSize="12sp"
                         android:textStyle="bold" />
+
                     <TextView
                         android:id="@+id/tv_daily_title"
                         android:layout_width="match_parent"
@@ -155,6 +154,7 @@
                         android:textColor="@color/on_gradient"
                         android:textSize="24sp"
                         android:textStyle="bold" />
+
                     <TextView
                         android:id="@+id/tv_daily_type"
                         android:layout_width="wrap_content"
@@ -168,6 +168,7 @@
                         android:textColor="@color/on_gradient"
                         android:textSize="12sp"
                         android:textStyle="bold" />
+
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="40dp"
@@ -177,6 +178,7 @@
                         android:orientation="horizontal"
                         android:paddingStart="18dp"
                         android:paddingEnd="12dp">
+
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
@@ -184,6 +186,7 @@
                             android:textColor="#2185F5"
                             android:textSize="14sp"
                             android:textStyle="bold" />
+
                         <ImageView
                             android:layout_width="18dp"
                             android:layout_height="18dp"
@@ -194,7 +197,7 @@
                 </LinearLayout>
             </FrameLayout>
 
-            <!-- Now playing (audio) -->
+            <!-- Now playing -->
             <LinearLayout
                 android:id="@+id/card_now_playing"
                 android:layout_width="match_parent"
@@ -209,6 +212,7 @@
                 android:paddingStart="14dp"
                 android:paddingEnd="12dp"
                 android:visibility="gone">
+
                 <ImageView
                     android:layout_width="44dp"
                     android:layout_height="44dp"
@@ -216,6 +220,7 @@
                     android:padding="11dp"
                     android:src="@drawable/ic_music_note"
                     android:tint="@color/on_gradient" />
+
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -223,6 +228,7 @@
                     android:layout_marginEnd="12dp"
                     android:layout_weight="1"
                     android:orientation="vertical">
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -231,6 +237,7 @@
                         android:textColor="@color/accent"
                         android:textSize="11sp"
                         android:textStyle="bold" />
+
                     <TextView
                         android:id="@+id/tv_now_title"
                         android:layout_width="match_parent"
@@ -242,6 +249,7 @@
                         android:textSize="16sp"
                         android:textStyle="bold" />
                 </LinearLayout>
+
                 <ImageView
                     android:id="@+id/btn_now_play"
                     android:layout_width="44dp"
@@ -262,6 +270,7 @@
                 android:layout_marginTop="28dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
+
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -270,6 +279,7 @@
                     android:textColor="@color/text_primary"
                     android:textSize="19sp"
                     android:textStyle="bold" />
+
                 <TextView
                     android:id="@+id/see_all_library"
                     android:layout_width="wrap_content"
@@ -280,6 +290,7 @@
                     android:textSize="14sp"
                     android:textStyle="bold" />
             </LinearLayout>
+
             <HorizontalScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -289,6 +300,7 @@
                 android:paddingStart="20dp"
                 android:paddingEnd="20dp"
                 android:scrollbars="none">
+
                 <LinearLayout
                     android:id="@+id/categories_container"
                     android:layout_width="wrap_content"
@@ -303,6 +315,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:visibility="gone">
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -311,6 +324,7 @@
                     android:layout_marginTop="28dp"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
+
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -319,6 +333,7 @@
                         android:textColor="@color/text_primary"
                         android:textSize="19sp"
                         android:textStyle="bold" />
+
                     <TextView
                         android:id="@+id/see_all_recent"
                         android:layout_width="wrap_content"
@@ -329,6 +344,7 @@
                         android:textSize="14sp"
                         android:textStyle="bold" />
                 </LinearLayout>
+
                 <HorizontalScrollView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -338,6 +354,7 @@
                     android:paddingStart="20dp"
                     android:paddingEnd="20dp"
                     android:scrollbars="none">
+
                     <LinearLayout
                         android:id="@+id/recent_container"
                         android:layout_width="wrap_content"
@@ -355,6 +372,7 @@
                 android:layout_marginTop="28dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
+
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -363,6 +381,7 @@
                     android:textColor="@color/text_primary"
                     android:textSize="19sp"
                     android:textStyle="bold" />
+
                 <TextView
                     android:id="@+id/see_all_fav"
                     android:layout_width="wrap_content"
@@ -373,6 +392,7 @@
                     android:textSize="14sp"
                     android:textStyle="bold" />
             </LinearLayout>
+
             <HorizontalScrollView
                 android:id="@+id/scroll_fav"
                 android:layout_width="match_parent"
@@ -383,12 +403,14 @@
                 android:paddingStart="20dp"
                 android:paddingEnd="20dp"
                 android:scrollbars="none">
+
                 <LinearLayout
                     android:id="@+id/fav_container"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal" />
             </HorizontalScrollView>
+
             <LinearLayout
                 android:id="@+id/fav_empty"
                 android:layout_width="match_parent"
@@ -401,13 +423,15 @@
                 android:orientation="horizontal"
                 android:padding="16dp"
                 android:visibility="gone">
+
                 <ImageView
                     android:layout_width="40dp"
                     android:layout_height="40dp"
                     android:background="@drawable/bg_badge"
                     android:padding="10dp"
                     android:src="@drawable/ic_heart_outline"
-                    android:tint="@color/red" />
+                    android:tint="@color/accent" />
+
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -432,6 +456,7 @@
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:padding="16dp">
+
                 <ImageView
                     android:layout_width="52dp"
                     android:layout_height="52dp"
@@ -439,12 +464,14 @@
                     android:padding="14dp"
                     android:src="@drawable/ic_music_note"
                     android:tint="@color/on_gradient" />
+
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
                     android:layout_weight="1"
                     android:orientation="vertical">
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -452,6 +479,7 @@
                         android:textColor="@color/text_primary"
                         android:textSize="17sp"
                         android:textStyle="bold" />
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -460,6 +488,7 @@
                         android:textColor="@color/text_secondary"
                         android:textSize="13sp" />
                 </LinearLayout>
+
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"

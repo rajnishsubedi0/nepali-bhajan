@@ -27,7 +27,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-/** Full bhajan library: search, deity chips and All / Recent / Favourites. */
+/**
+ * Redesigned Library tab: search, deity chips, All / Recent / Favourites.
+ * Recent and Favourites counts are controlled by Settings.
+ */
 public class LibraryActivity extends AppCompatActivity {
 
     public static final String EXTRA_CATEGORY = "CATEGORY";
@@ -39,6 +42,7 @@ public class LibraryActivity extends AppCompatActivity {
     public static final int TAB_FAV = 2;
 
     private final List<String> cats = Arrays.asList("All", "Krishna", "Shiva", "Hari", "Ram", "Others");
+
     private List<Bhajan> all = new ArrayList<>();
     private String category = "All";
     private int tab = TAB_ALL;
@@ -77,6 +81,7 @@ public class LibraryActivity extends AppCompatActivity {
         tvEmptyTitle = findViewById(R.id.tv_empty_title);
         tvEmptySub = findViewById(R.id.tv_empty_sub);
         rvList = findViewById(R.id.recyclerView);
+
         root.requestFocus();
 
         adapter = new BhajanAdapter(new ArrayList<>(), this);
@@ -89,7 +94,12 @@ public class LibraryActivity extends AppCompatActivity {
         categoryAdapter = new CategoryAdapter(cats, this, c -> { category = c; refresh(); });
         rvCategories.setAdapter(categoryAdapter);
 
-        segments = new TextView[]{findViewById(R.id.seg_all), findViewById(R.id.seg_recent), findViewById(R.id.seg_fav)};
+        segments = new TextView[]{
+            findViewById(R.id.seg_all),
+            findViewById(R.id.seg_recent),
+            findViewById(R.id.seg_fav)
+        };
+
         for (int i = 0; i < segments.length; i++) {
             final int t = i;
             segments[i].setOnClickListener(v -> setTab(t));
@@ -100,6 +110,7 @@ public class LibraryActivity extends AppCompatActivity {
             etSearch.clearFocus();
             hideKeyboard();
         });
+
         etSearch.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
             public void onTextChanged(CharSequence s, int a, int b, int c) {
@@ -108,6 +119,7 @@ public class LibraryActivity extends AppCompatActivity {
             }
             public void afterTextChanged(Editable s) {}
         });
+
         etSearch.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                 hideKeyboard();
@@ -121,12 +133,14 @@ public class LibraryActivity extends AppCompatActivity {
         btnClearAll.setOnClickListener(v -> {
             if (tab == TAB_RECENT) {
                 Helper.showConfirm(this, "Clear recent", "Remove all recently opened bhajans?", "Clear", true, () -> {
-                    Helper.clearRecents(this); refresh();
+                    Helper.clearRecents(this);
+                    refresh();
                     Toast.makeText(this, "Recent cleared", Toast.LENGTH_SHORT).show();
                 });
             } else if (tab == TAB_FAV) {
                 Helper.showConfirm(this, "Clear favourites", "Remove all bhajans from your favourite list?", "Clear", true, () -> {
-                    Helper.clearFavs(this); refresh();
+                    Helper.clearFavs(this);
+                    refresh();
                     Toast.makeText(this, "Favourites cleared", Toast.LENGTH_SHORT).show();
                 });
             }
@@ -157,6 +171,7 @@ public class LibraryActivity extends AppCompatActivity {
 
     private void applyIntent(Intent in) {
         if (in == null) return;
+
         if (in.hasExtra(EXTRA_CATEGORY)) {
             String c = in.getStringExtra(EXTRA_CATEGORY);
             category = (c == null || !cats.contains(c)) ? "All" : c;
@@ -173,6 +188,7 @@ public class LibraryActivity extends AppCompatActivity {
                 if (imm != null) imm.showSoftInput(etSearch, InputMethodManager.SHOW_IMPLICIT);
             });
         }
+
         in.removeExtra(EXTRA_CATEGORY);
         in.removeExtra(EXTRA_TAB);
         in.removeExtra(EXTRA_FOCUS_SEARCH);
@@ -196,11 +212,15 @@ public class LibraryActivity extends AppCompatActivity {
 
     private void refresh() {
         if (adapter == null) return;
+
         String q = etSearch.getText().toString().trim().toLowerCase();
+        int recentLimit = Helper.getLibraryRecentLimit(this);
 
         List<Bhajan> base = new ArrayList<>();
         if (tab == TAB_RECENT) {
-            for (String id : Helper.getRecentIds(this)) {
+            List<String> recentIds = Helper.getRecentIds(this);
+            if (recentIds.size() > recentLimit) recentIds = recentIds.subList(0, recentLimit);
+            for (String id : recentIds) {
                 Bhajan b = BhajanRepo.find(all, id);
                 if (b != null) base.add(b);
             }
@@ -226,6 +246,7 @@ public class LibraryActivity extends AppCompatActivity {
         boolean empty = out.isEmpty() && !all.isEmpty();
         emptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
         rvList.setVisibility(empty ? View.INVISIBLE : View.VISIBLE);
+
         if (empty) {
             if (!q.isEmpty() || !"All".equals(category)) {
                 tvEmptyTitle.setText("No bhajans found");

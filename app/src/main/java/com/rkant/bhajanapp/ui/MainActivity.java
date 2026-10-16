@@ -29,8 +29,8 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Home dashboard: bhajan of the day, deity shortcuts, continue reading, favourites
- * and a now-playing strip. The searchable full list lives in {@link LibraryActivity}.
+ * Home dashboard: bhajan of the day, deity shortcuts, continue reading,
+ * favourites and a now-playing strip.
  */
 public class MainActivity extends AppCompatActivity {
 
@@ -45,8 +45,6 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvDailyTitle, tvDailyType, tvNowTitle;
     private ImageView btnNowPlay;
     private LinearLayout categoriesContainer, recentContainer, favContainer;
-
-    // Audio nav icon pulses while music plays
     private View btnAudio;
     private ObjectAnimator pulseAnim;
 
@@ -72,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        public void onProgress(long position, long duration) { /* not needed here */ }
+        public void onProgress(long position, long duration) {}
     };
 
     @Override
@@ -99,18 +97,22 @@ public class MainActivity extends AppCompatActivity {
 
         ((TextView) findViewById(R.id.tv_greeting)).setText(greeting());
 
+        // Search box opens Library with keyboard
         findViewById(R.id.search_box).setOnClickListener(v ->
                 startActivity(LibraryActivity.intent(this, "All", LibraryActivity.TAB_ALL, true)));
-        findViewById(R.id.btn_filter).setOnClickListener(v ->
-                startActivity(LibraryActivity.intent(this, "All", LibraryActivity.TAB_ALL, false)));
+
+        // "See all" links
         findViewById(R.id.see_all_library).setOnClickListener(v ->
                 startActivity(LibraryActivity.intent(this, "All", LibraryActivity.TAB_ALL, false)));
         findViewById(R.id.see_all_recent).setOnClickListener(v ->
                 startActivity(LibraryActivity.intent(this, "All", LibraryActivity.TAB_RECENT, false)));
         findViewById(R.id.see_all_fav).setOnClickListener(v ->
                 startActivity(LibraryActivity.intent(this, "All", LibraryActivity.TAB_FAV, false)));
+
+        // Audio shortcut
         findViewById(R.id.card_audio).setOnClickListener(v -> BottomNav.open(this, BottomNav.AUDIO));
 
+        // Random bhajan
         findViewById(R.id.btn_random).setOnClickListener(v -> {
             if (all.isEmpty()) return;
             openBhajan(all.get(new Random().nextInt(all.size())));
@@ -147,8 +149,6 @@ public class MainActivity extends AppCompatActivity {
         bindContent();
     }
 
-    // ───────────────────────────── content ─────────────────────────────
-
     private void bindContent() {
         if (all.isEmpty()) return;
         bindDaily();
@@ -181,6 +181,7 @@ public class MainActivity extends AppCompatActivity {
             ((TextView) tile.findViewById(R.id.tv_cat_name)).setText(BhajanCategories.NEPALI[i]);
             ((TextView) tile.findViewById(R.id.tv_cat_en)).setText(BhajanCategories.ENGLISH[i]);
             ((TextView) tile.findViewById(R.id.tv_cat_count)).setText(count + (count == 1 ? " bhajan" : " bhajans"));
+
             final String english = BhajanCategories.ENGLISH[i];
             tile.setOnClickListener(v ->
                     startActivity(LibraryActivity.intent(this, english, LibraryActivity.TAB_ALL, false)));
@@ -191,11 +192,13 @@ public class MainActivity extends AppCompatActivity {
     private void bindRecent() {
         recentContainer.removeAllViews();
         int shown = 0;
+        int limit = Helper.getLibraryRecentLimit(this);
         for (String id : Helper.getRecentIds(this)) {
+            if (shown >= limit || shown >= MAX_HORIZONTAL_CARDS) break;
             Bhajan b = BhajanRepo.find(all, id);
             if (b == null) continue;
             recentContainer.addView(makeCard(b, recentContainer));
-            if (++shown >= MAX_HORIZONTAL_CARDS) break;
+            shown++;
         }
         sectionRecent.setVisibility(shown > 0 ? View.VISIBLE : View.GONE);
     }
@@ -205,8 +208,9 @@ public class MainActivity extends AppCompatActivity {
         int shown = 0;
         for (Bhajan b : all) {
             if (!Helper.isFav(this, b.id)) continue;
+            if (shown >= MAX_HORIZONTAL_CARDS) break;
             favContainer.addView(makeCard(b, favContainer));
-            if (++shown >= MAX_HORIZONTAL_CARDS) break;
+            shown++;
         }
         scrollFav.setVisibility(shown > 0 ? View.VISIBLE : View.GONE);
         favEmpty.setVisibility(shown > 0 ? View.GONE : View.VISIBLE);
@@ -241,11 +245,11 @@ public class MainActivity extends AppCompatActivity {
     private String greeting() {
         int h = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
         String text;
-        if (h < 5) text = "\u0936\u0941\u092D \u0930\u093E\u0924\u094D\u0930\u093F";            // शुभ रात्रि
-        else if (h < 12) text = "\u0936\u0941\u092D \u092A\u094D\u0930\u092D\u093E\u0924";      // शुभ प्रभात
-        else if (h < 17) text = "\u0936\u0941\u092D \u0926\u093F\u0928";                        // शुभ दिन
-        else if (h < 20) text = "\u0936\u0941\u092D \u0938\u0928\u094D\u0927\u094D\u092F\u093E"; // शुभ सन्ध्या
-        else text = "\u0936\u0941\u092D \u0930\u093E\u0924\u094D\u0930\u093F";                  // शुभ रात्रि
+        if (h < 5) text = "\u0936\u0941\u092D \u0930\u093E\u0924\u094D\u0930\u093F";
+        else if (h < 12) text = "\u0936\u0941\u092D \u092A\u094D\u0930\u092D\u093E\u0924";
+        else if (h < 17) text = "\u0936\u0941\u092D \u0926\u093F\u0928";
+        else if (h < 20) text = "\u0936\u0941\u092D \u0938\u0928\u094D\u0927\u094D\u092F\u093E";
+        else text = "\u0936\u0941\u092D \u0930\u093E\u0924\u094D\u0930\u093F";
         return text + " \uD83D\uDE4F";
     }
 
@@ -255,7 +259,8 @@ public class MainActivity extends AppCompatActivity {
         if (backOnce && (now - lastBack) <= 2000) {
             super.onBackPressed();
         } else {
-            backOnce = true; lastBack = now;
+            backOnce = true;
+            lastBack = now;
             Toast.makeText(this, "Press back again to exit", Toast.LENGTH_SHORT).show();
             backHandler.postDelayed(() -> backOnce = false, 2000);
         }

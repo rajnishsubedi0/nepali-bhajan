@@ -9,25 +9,31 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.rkant.bhajanapp.R;
 import com.rkant.bhajanapp.adapter.LyricAdapter;
 import com.rkant.bhajanapp.model.Bhajan;
 import com.rkant.bhajanapp.utils.BhajanRepo;
 import com.rkant.bhajanapp.utils.Helper;
 import com.rkant.bhajanapp.utils.ImageSharer;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 
 public class DetailActivity extends AppCompatActivity {
+
     private static final long SCROLL_TICK_MS = 30L;
-    // dp scrolled per tick for 1x / 2x / 3x
-    private static final float[] SCROLL_DP_PER_TICK = {0.6f, 1.2f, 2.0f};
+    // Added 0.3x and 0.5x for slower scrolling
+    private static final float[] SCROLL_DP_PER_TICK = {0.3f, 0.5f, 0.6f, 1.2f, 2.0f};
+    private static final String[] SPEED_LABELS = {"0.3x", "0.5x", "1x", "2x", "3x"};
 
     private String bhajanId, title;
     private final List<String> lyrics = new ArrayList<>();
@@ -35,14 +41,14 @@ public class DetailActivity extends AppCompatActivity {
     private RecyclerView rv;
     private ImageView btnFav, btnAutoScroll;
     private TextView tvSpeed;
-
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean autoScrolling = false;
-    private int speedLevel = 0;
+    private int speedLevel = 2; // default 1x
     private float scrollRemainder = 0f;
 
     private final Runnable scrollTick = new Runnable() {
-        @Override public void run() {
+        @Override
+        public void run() {
             if (!autoScrolling || rv == null) return;
             if (!rv.canScrollVertically(1)) { stopAutoScroll(); return; }
             float px = SCROLL_DP_PER_TICK[speedLevel] * getResources().getDisplayMetrics().density + scrollRemainder;
@@ -58,6 +64,7 @@ public class DetailActivity extends AppCompatActivity {
         Helper.applyTheme(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detail);
+
         bhajanId = getIntent().getStringExtra("ID");
         title = getIntent().getStringExtra("TITLE");
         Helper.addRecent(this, bhajanId);
@@ -93,24 +100,29 @@ public class DetailActivity extends AppCompatActivity {
             });
         });
 
-        // Reader toolbar: text size + auto scroll
         findViewById(R.id.btn_font_minus).setOnClickListener(v -> changeFont(-1));
         findViewById(R.id.btn_font_plus).setOnClickListener(v -> changeFont(1));
-        btnAutoScroll.setOnClickListener(v -> { if (autoScrolling) stopAutoScroll(); else startAutoScroll(); });
+
+        btnAutoScroll.setOnClickListener(v -> {
+            if (autoScrolling) stopAutoScroll();
+            else startAutoScroll();
+        });
+
         tvSpeed.setOnClickListener(v -> {
             speedLevel = (speedLevel + 1) % SCROLL_DP_PER_TICK.length;
             updateSpeedLabel();
         });
+
         rv.addOnScrollListener(new RecyclerView.OnScrollListener() {
-            @Override public void onScrollStateChanged(RecyclerView r, int newState) {
-                // The reader grabbed the list: hand control back to them.
+            @Override
+            public void onScrollStateChanged(RecyclerView r, int newState) {
                 if (newState == RecyclerView.SCROLL_STATE_DRAGGING && autoScrolling) stopAutoScroll();
             }
         });
+
         updateSpeedLabel();
         updateAutoScrollIcon();
 
-        // Screen timeout: default 3 min, customizable (-1 = always on)
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         int mins = Helper.getScreenTimeout(this);
         if (mins > 0) {
@@ -164,13 +176,14 @@ public class DetailActivity extends AppCompatActivity {
     }
 
     private void updateSpeedLabel() {
-        tvSpeed.setText((speedLevel + 1) + "x");
+        tvSpeed.setText(SPEED_LABELS[speedLevel]);
     }
 
     private void updateFavIcon() {
         boolean fav = Helper.isFav(this, bhajanId);
         btnFav.setImageResource(fav ? R.drawable.ic_heart_filled : R.drawable.ic_heart_outline);
-        btnFav.setColorFilter(getColor(fav ? R.color.red : R.color.text_secondary));
+        // Use accent color instead of red
+        btnFav.setColorFilter(getColor(fav ? R.color.accent : R.color.text_secondary));
     }
 
     private void loadLyrics() {
