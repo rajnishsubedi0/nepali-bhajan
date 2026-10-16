@@ -10,20 +10,92 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:fillViewport="true">
+        android:fillViewport="true"
+        android:scrollbars="none">
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="20dp">
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="28dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:text="Settings"
+                android:textColor="@color/text_primary"
+                android:textSize="28sp"
+                android:textStyle="bold" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Changes are saved automatically"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp" />
+
+            <!-- App card -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:background="@drawable/bg_gradient_primary">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="end|center_vertical"
+                    android:layout_marginEnd="18dp"
+                    android:alpha="0.2"
+                    android:includeFontPadding="false"
+                    android:text="ॐ"
+                    android:textColor="@color/on_gradient"
+                    android:textSize="84sp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="22dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Bhajan Sangraha"
+                        android:textColor="@color/on_gradient"
+                        android:textSize="22sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:id="@+id/tv_version"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:alpha="0.9"
+                        android:textColor="@color/on_gradient"
+                        android:textSize="13sp" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:background="@drawable/bg_tag_on_gradient"
+                        android:paddingStart="10dp"
+                        android:paddingEnd="10dp"
+                        android:paddingTop="3dp"
+                        android:paddingBottom="3dp"
+                        android:text="Nepali devotional lyrics &amp; audio"
+                        android:textColor="@color/on_gradient"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </FrameLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="26dp"
                 android:letterSpacing="0.08"
                 android:text="APPEARANCE"
                 android:textColor="@color/text_secondary"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <LinearLayout
@@ -32,21 +104,42 @@
                 android:layout_marginTop="12dp"
                 android:background="@drawable/bg_card"
                 android:orientation="vertical"
-                android:padding="20dp">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Theme"
-                    android:textColor="@color/text_primary"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-                <TextView
+                android:padding="18dp">
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="Choose how the app looks: follow system, always light, or always dark."
-                    android:textColor="@color/text_secondary"
-                    android:textSize="15sp" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/bg_badge"
+                        android:padding="10dp"
+                        android:src="@drawable/ic_palette"
+                        android:tint="@color/accent" />
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Theme"
+                            android:textColor="@color/text_primary"
+                            android:textSize="17sp"
+                            android:textStyle="bold" />
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Follow system, always light or always dark"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -54,44 +147,64 @@
                     android:background="@drawable/bg_segment"
                     android:orientation="horizontal"
                     android:padding="4dp">
-                    <TextView android:id="@+id/btn_system" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:gravity="center" android:text="System" android:textStyle="bold" />
-                    <TextView android:id="@+id/btn_light" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:gravity="center" android:text="Light" android:textStyle="bold" />
-                    <TextView android:id="@+id/btn_dark" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:gravity="center" android:text="Dark" android:textStyle="bold" />
+                    <TextView android:id="@+id/btn_system" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:gravity="center" android:singleLine="true" android:text="System" android:textSize="14sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/btn_light" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:gravity="center" android:singleLine="true" android:text="Light" android:textSize="14sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/btn_dark" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:gravity="center" android:singleLine="true" android:text="Dark" android:textSize="14sp" android:textStyle="bold" />
                 </LinearLayout>
             </LinearLayout>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="26dp"
                 android:letterSpacing="0.08"
-                android:text="TEXT SIZE"
+                android:text="READING"
                 android:textColor="@color/text_secondary"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
-            <!-- List font size card -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:background="@drawable/bg_card"
                 android:orientation="vertical"
-                android:padding="20dp">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="List Text Size"
-                    android:textColor="@color/text_primary"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-                <TextView
+                android:padding="18dp">
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="Bhajan titles and Nepali numbers in the main list."
-                    android:textColor="@color/text_secondary"
-                    android:textSize="15sp" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/bg_badge"
+                        android:padding="10dp"
+                        android:src="@drawable/ic_text_size"
+                        android:tint="@color/accent" />
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="List text size"
+                            android:textColor="@color/text_primary"
+                            android:textSize="17sp"
+                            android:textStyle="bold" />
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Titles and numbers in the library"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -100,11 +213,10 @@
                     android:orientation="horizontal">
                     <TextView
                         android:id="@+id/btn_list_minus"
-                        android:layout_width="wrap_content"
+                        android:layout_width="64dp"
                         android:layout_height="44dp"
                         android:background="@drawable/bg_pill"
                         android:gravity="center"
-                        android:paddingHorizontal="22dp"
                         android:text="A-"
                         android:textColor="@color/text_primary"
                         android:textSize="16sp"
@@ -121,11 +233,10 @@
                         android:textStyle="bold" />
                     <TextView
                         android:id="@+id/btn_list_plus"
-                        android:layout_width="wrap_content"
+                        android:layout_width="64dp"
                         android:layout_height="44dp"
                         android:background="@drawable/bg_pill"
                         android:gravity="center"
-                        android:paddingHorizontal="22dp"
                         android:text="A+"
                         android:textColor="@color/text_primary"
                         android:textSize="16sp"
@@ -133,28 +244,48 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Lyric font size card -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="14dp"
                 android:background="@drawable/bg_card"
                 android:orientation="vertical"
-                android:padding="20dp">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Lyric Text Size"
-                    android:textColor="@color/text_primary"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-                <TextView
+                android:padding="18dp">
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="Reading size inside the bhajan lyric view."
-                    android:textColor="@color/text_secondary"
-                    android:textSize="15sp" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/bg_badge"
+                        android:padding="10dp"
+                        android:src="@drawable/ic_book"
+                        android:tint="@color/accent" />
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Lyric text size"
+                            android:textColor="@color/text_primary"
+                            android:textSize="17sp"
+                            android:textStyle="bold" />
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Reading size inside a bhajan"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -163,11 +294,10 @@
                     android:orientation="horizontal">
                     <TextView
                         android:id="@+id/btn_lyric_minus"
-                        android:layout_width="wrap_content"
+                        android:layout_width="64dp"
                         android:layout_height="44dp"
                         android:background="@drawable/bg_pill"
                         android:gravity="center"
-                        android:paddingHorizontal="22dp"
                         android:text="A-"
                         android:textColor="@color/text_primary"
                         android:textSize="16sp"
@@ -184,26 +314,95 @@
                         android:textStyle="bold" />
                     <TextView
                         android:id="@+id/btn_lyric_plus"
-                        android:layout_width="wrap_content"
+                        android:layout_width="64dp"
                         android:layout_height="44dp"
                         android:background="@drawable/bg_pill"
                         android:gravity="center"
-                        android:paddingHorizontal="22dp"
                         android:text="A+"
                         android:textColor="@color/text_primary"
                         android:textSize="16sp"
                         android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tv_lyric_preview"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/bg_segment"
+                    android:gravity="center"
+                    android:lineSpacingExtra="6dp"
+                    android:padding="16dp"
+                    android:text="ॐ जय जगदीश हरे\nस्वामी जय जगदीश हरे"
+                    android:textColor="@color/text_primary"
+                    android:textSize="21sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="18dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/bg_badge"
+                        android:padding="10dp"
+                        android:src="@drawable/ic_timer"
+                        android:tint="@color/accent" />
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Screen timeout"
+                            android:textColor="@color/text_primary"
+                            android:textSize="17sp"
+                            android:textStyle="bold" />
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Keep the screen on while reading lyrics"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/bg_segment"
+                    android:orientation="horizontal"
+                    android:padding="4dp">
+                    <TextView android:id="@+id/btn_t1" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:gravity="center" android:singleLine="true" android:text="1 min" android:textSize="12sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/btn_t3" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:gravity="center" android:singleLine="true" android:text="3 min" android:textSize="12sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/btn_t5" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:gravity="center" android:singleLine="true" android:text="5 min" android:textSize="12sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/btn_t10" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:gravity="center" android:singleLine="true" android:text="10 min" android:textSize="12sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/btn_talways" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:gravity="center" android:singleLine="true" android:text="Always" android:textSize="12sp" android:textStyle="bold" />
                 </LinearLayout>
             </LinearLayout>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="26dp"
                 android:letterSpacing="0.08"
-                android:text="READING"
+                android:text="PLAYBACK"
                 android:textColor="@color/text_secondary"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <LinearLayout
@@ -212,72 +411,41 @@
                 android:layout_marginTop="12dp"
                 android:background="@drawable/bg_card"
                 android:orientation="vertical"
-                android:padding="20dp">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Screen Timeout"
-                    android:textColor="@color/text_primary"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
-                <TextView
+                android:padding="18dp">
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="Keep the screen on while reading lyrics. Default is 3 minutes."
-                    android:textColor="@color/text_secondary"
-                    android:textSize="15sp" />
-                <HorizontalScrollView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:scrollbars="none">
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/bg_badge"
+                        android:padding="10dp"
+                        android:src="@drawable/ic_battery"
+                        android:tint="@color/accent" />
                     <LinearLayout
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-                        <TextView android:id="@+id/btn_t1" android:layout_width="wrap_content" android:layout_height="40dp" android:layout_marginEnd="8dp" android:background="@drawable/bg_pill" android:gravity="center" android:paddingHorizontal="18dp" android:text="1 min" android:textStyle="bold" />
-                        <TextView android:id="@+id/btn_t3" android:layout_width="wrap_content" android:layout_height="40dp" android:layout_marginEnd="8dp" android:background="@drawable/bg_pill" android:gravity="center" android:paddingHorizontal="18dp" android:text="3 min" android:textStyle="bold" />
-                        <TextView android:id="@+id/btn_t5" android:layout_width="wrap_content" android:layout_height="40dp" android:layout_marginEnd="8dp" android:background="@drawable/bg_pill" android:gravity="center" android:paddingHorizontal="18dp" android:text="5 min" android:textStyle="bold" />
-                        <TextView android:id="@+id/btn_t10" android:layout_width="wrap_content" android:layout_height="40dp" android:layout_marginEnd="8dp" android:background="@drawable/bg_pill" android:gravity="center" android:paddingHorizontal="18dp" android:text="10 min" android:textStyle="bold" />
-                        <TextView android:id="@+id/btn_talways" android:layout_width="wrap_content" android:layout_height="40dp" android:background="@drawable/bg_pill" android:gravity="center" android:paddingHorizontal="18dp" android:text="Always" android:textStyle="bold" />
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Background playback"
+                            android:textColor="@color/text_primary"
+                            android:textSize="17sp"
+                            android:textStyle="bold" />
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="If audio stops when the screen turns off, disable battery optimization for this app"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp" />
                     </LinearLayout>
-                </HorizontalScrollView>
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
-                    android:letterSpacing="0.08"
-                    android:text="PLAYBACK"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/bg_card"
-                android:orientation="vertical"
-                android:padding="20dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Background Playback"
-                    android:textColor="@color/text_primary"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="If music stops when the screen turns off, disable battery optimization for this app."
-                    android:textColor="@color/text_secondary"
-                    android:textSize="15sp" />
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/btn_battery"
@@ -286,24 +454,121 @@
                     android:layout_marginTop="14dp"
                     android:background="@drawable/bg_pill"
                     android:gravity="center"
-                    android:paddingHorizontal="22dp"
-                    android:text="Open Battery Settings"
-                    android:textColor="@color/text_primary"
-                    android:textSize="15sp"
+                    android:paddingStart="22dp"
+                    android:paddingEnd="22dp"
+                    android:text="Open battery settings"
+                    android:textColor="@color/accent"
+                    android:textSize="14sp"
                     android:textStyle="bold" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="26dp"
+                android:letterSpacing="0.08"
+                android:text="YOUR DATA"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:paddingStart="18dp"
+                android:paddingEnd="18dp">
+
+                <LinearLayout
+                    android:id="@+id/btn_clear_recent"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_history"
+                        android:tint="@color/text_primary" />
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:text="Clear reading history"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_chevron_right"
+                        android:tint="@color/text_secondary" />
+                </LinearLayout>
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/divider" />
+
+                <LinearLayout
+                    android:id="@+id/btn_clear_favs"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_heart_outline"
+                        android:tint="@color/red" />
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:text="Clear favourites"
+                        android:textColor="@color/red"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_chevron_right"
+                        android:tint="@color/text_secondary" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="26dp"
+                android:letterSpacing="0.08"
+                android:text="ABOUT"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="18dp">
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:lineSpacingMultiplier="1.2"
+                    android:text="Bhajan Sangraha brings Nepali devotional lyrics, bhajan audio and YouTube links together in one place. Many bhajans are traditional or of unknown authorship; audio and videos belong to their original creators."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp" />
             </LinearLayout>
         </LinearLayout>
     </ScrollView>
 
-    <TextView
-        android:id="@+id/btn_save"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:layout_margin="16dp"
-        android:background="@drawable/bg_button_accent"
-        android:gravity="center"
-        android:text="Save Settings"
-        android:textColor="@color/on_accent"
-        android:textSize="17sp"
-        android:textStyle="bold" />
+    <include layout="@layout/view_bottom_nav" />
 </LinearLayout>

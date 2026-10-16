@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bg">#0A0E15</color>
-    <color name="card">#141B27</color>
-    <color name="card_border">#1E2836</color>
-    <color name="text_primary">#F2F5F8</color>
-    <color name="text_secondary">#8A97A8</color>
-    <color name="accent">#4EC3F7</color>
-    <color name="on_accent">#06222F</color>
+    <color name="bg">#0B1120</color>
+    <color name="card">#151D31</color>
+    <color name="card_border">#212C46</color>
+    <color name="text_primary">#F1F5FB</color>
+    <color name="text_secondary">#8F9BB3</color>
+    <color name="accent">#3D94FF</color>
+    <color name="accent_light">#5CC0FF</color>
+    <color name="on_accent">#FFFFFF</color>
+    <color name="on_gradient">#FFFFFF</color>
     <color name="green">#2ED096</color>
-    <color name="red">#F58080</color>
-    <color name="muted">#1D2634</color>
-    <color name="divider">#1E2836</color>
+    <color name="red">#FF6B70</color>
+    <color name="muted">#1C2740</color>
+    <color name="divider">#212C46</color>
 </resources>

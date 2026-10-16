@@ -6,60 +6,54 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.text.Editable;
-import android.text.TextWatcher;
+import android.view.LayoutInflater;
 import android.view.View;
-import android.view.inputmethod.InputMethodManager;
-import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.tabs.TabLayout;
 import com.rkant.bhajanapp.R;
-import com.rkant.bhajanapp.adapter.BhajanAdapter;
-import com.rkant.bhajanapp.adapter.CategoryAdapter;
 import com.rkant.bhajanapp.model.Bhajan;
+import com.rkant.bhajanapp.utils.BhajanCategories;
+import com.rkant.bhajanapp.utils.BhajanRepo;
 import com.rkant.bhajanapp.utils.BottomNav;
 import com.rkant.bhajanapp.utils.Helper;
 import com.rkant.bhajanapp.utils.PlaybackManager;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Calendar;
 import java.util.List;
-import java.util.concurrent.Executors;
+import java.util.Random;
 
+/**
+ * Home dashboard: bhajan of the day, deity shortcuts, continue reading, favourites
+ * and a now-playing strip. The searchable full list lives in {@link LibraryActivity}.
+ */
 public class MainActivity extends AppCompatActivity {
 
-    private BhajanAdapter adapter;
-    private RecyclerView rvCategories;
+    private static final int MAX_HORIZONTAL_CARDS = 10;
+
     private List<Bhajan> all = new ArrayList<>();
-    private final List<String> cats = Arrays.asList("All", "Krishna", "Shiva", "Hari", "Ram", "Others");
-    private String category = "All";
-    private int currentTab = 0;
     private boolean backOnce = false;
     private long lastBack = 0;
-    private long searchFocusGainedAt = 0;
     private final Handler backHandler = new Handler(Looper.getMainLooper());
-    private View root, btnClear, btnClearAll;
-    private EditText etSearch;
-    private TextView tvCount, tvFavCount;
 
-    // Audio player button + animation
+    private View cardDaily, cardNowPlaying, sectionRecent, favEmpty, scrollFav;
+    private TextView tvDailyTitle, tvDailyType, tvNowTitle;
+    private ImageView btnNowPlay;
+    private LinearLayout categoriesContainer, recentContainer, favContainer;
+
+    // Audio nav icon pulses while music plays
     private View btnAudio;
     private ObjectAnimator pulseAnim;
 
     private final PlaybackManager.Listener playbackListener = new PlaybackManager.Listener() {
         @Override
         public void onStateChanged(boolean isPlaying, String title, String mediaId) {
+            updateNowPlaying(isPlaying, title);
             if (btnAudio == null) return;
             if (isPlaying) {
                 if (pulseAnim == null) {
@@ -87,76 +81,49 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        root = findViewById(R.id.root);
-        etSearch = findViewById(R.id.et_search);
-        btnClear = findViewById(R.id.btn_search_clear);
-        btnClearAll = findViewById(R.id.btn_clear_all);
-        tvCount = findViewById(R.id.tv_count);
-        tvFavCount = findViewById(R.id.tv_fav_count);
-        rvCategories = findViewById(R.id.rv_categories);
-        root.requestFocus();
-
-        RecyclerView rvList = findViewById(R.id.recyclerView);
-        adapter = new BhajanAdapter(new ArrayList<>(), this);
-        rvList.setLayoutManager(new LinearLayoutManager(this));
-        rvList.setAdapter(adapter);
-
-        // Bottom navigation; the Audio icon pulses while music plays
         btnAudio = findViewById(R.id.nav_audio_icon);
-        BottomNav.setup(this, 0);
+        BottomNav.setup(this, BottomNav.HOME);
 
-        TabLayout tabs = findViewById(R.id.tabs);
-        tabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
-            @Override public void onTabSelected(TabLayout.Tab t) { currentTab = t.getPosition(); refresh(); }
-            @Override public void onTabUnselected(TabLayout.Tab t) {}
-            @Override public void onTabReselected(TabLayout.Tab t) {}
+        cardDaily = findViewById(R.id.card_daily);
+        cardNowPlaying = findViewById(R.id.card_now_playing);
+        sectionRecent = findViewById(R.id.section_recent);
+        favEmpty = findViewById(R.id.fav_empty);
+        scrollFav = findViewById(R.id.scroll_fav);
+        tvDailyTitle = findViewById(R.id.tv_daily_title);
+        tvDailyType = findViewById(R.id.tv_daily_type);
+        tvNowTitle = findViewById(R.id.tv_now_title);
+        btnNowPlay = findViewById(R.id.btn_now_play);
+        categoriesContainer = findViewById(R.id.categories_container);
+        recentContainer = findViewById(R.id.recent_container);
+        favContainer = findViewById(R.id.fav_container);
+
+        ((TextView) findViewById(R.id.tv_greeting)).setText(greeting());
+
+        findViewById(R.id.search_box).setOnClickListener(v ->
+                startActivity(LibraryActivity.intent(this, "All", LibraryActivity.TAB_ALL, true)));
+        findViewById(R.id.btn_filter).setOnClickListener(v ->
+                startActivity(LibraryActivity.intent(this, "All", LibraryActivity.TAB_ALL, false)));
+        findViewById(R.id.see_all_library).setOnClickListener(v ->
+                startActivity(LibraryActivity.intent(this, "All", LibraryActivity.TAB_ALL, false)));
+        findViewById(R.id.see_all_recent).setOnClickListener(v ->
+                startActivity(LibraryActivity.intent(this, "All", LibraryActivity.TAB_RECENT, false)));
+        findViewById(R.id.see_all_fav).setOnClickListener(v ->
+                startActivity(LibraryActivity.intent(this, "All", LibraryActivity.TAB_FAV, false)));
+        findViewById(R.id.card_audio).setOnClickListener(v -> BottomNav.open(this, BottomNav.AUDIO));
+
+        findViewById(R.id.btn_random).setOnClickListener(v -> {
+            if (all.isEmpty()) return;
+            openBhajan(all.get(new Random().nextInt(all.size())));
         });
 
-        rvCategories.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-        rvCategories.setAdapter(new CategoryAdapter(cats, this, c -> { category = c; refresh(); }));
+        cardNowPlaying.setOnClickListener(v -> startActivity(new Intent(this, MusicPlayerActivity.class)));
+        btnNowPlay.setOnClickListener(v -> PlaybackManager.getInstance().playPause());
 
-        btnClear.setOnClickListener(v -> {
-            etSearch.setText("");
-            etSearch.clearFocus();
-            hideKeyboard();
-            refresh();
+        BhajanRepo.load(this, list -> {
+            if (isFinishing() || isDestroyed()) return;
+            all = list;
+            bindContent();
         });
-
-        btnClearAll.setOnClickListener(v -> {
-            if (currentTab == 1) {
-                Helper.showConfirm(this, "Clear recent", "Remove all recently opened bhajans?", "Clear", true, () -> {
-                    Helper.clearRecents(this); refresh();
-                    Toast.makeText(this, "Recent cleared", Toast.LENGTH_SHORT).show();
-                });
-            } else if (currentTab == 2) {
-                Helper.showConfirm(this, "Clear favourites", "Remove all bhajans from your favourite list?", "Clear", true, () -> {
-                    Helper.clearFavs(this); refresh();
-                    Toast.makeText(this, "Favourites cleared", Toast.LENGTH_SHORT).show();
-                });
-            }
-        });
-
-        etSearch.addTextChangedListener(new TextWatcher() {
-            public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
-            public void onTextChanged(CharSequence s, int a, int b, int c) {
-                btnClear.setVisibility(s.length() > 0 ? View.VISIBLE : View.GONE);
-                refresh();
-            }
-            public void afterTextChanged(Editable s) {}
-        });
-
-        etSearch.setOnFocusChangeListener((v, hasFocus) -> {
-            if (hasFocus) searchFocusGainedAt = System.currentTimeMillis();
-        });
-
-        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
-            if (!insets.isVisible(WindowInsetsCompat.Type.ime())) {
-                v.postDelayed(this::dropFocusIfKeyboardHidden, 350);
-            }
-            return ViewCompat.onApplyWindowInsets(v, insets);
-        });
-
-        loadData();
     }
 
     @Override
@@ -177,80 +144,119 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        root.requestFocus();
-        refresh();
+        bindContent();
     }
 
-    private void dropFocusIfKeyboardHidden() {
-        WindowInsetsCompat ins = ViewCompat.getRootWindowInsets(root);
-        boolean imeVisible = ins != null && ins.isVisible(WindowInsetsCompat.Type.ime());
-        if (!imeVisible && etSearch.hasFocus() && System.currentTimeMillis() - searchFocusGainedAt > 700) {
-            etSearch.clearFocus();
+    // ───────────────────────────── content ─────────────────────────────
+
+    private void bindContent() {
+        if (all.isEmpty()) return;
+        bindDaily();
+        bindCategories();
+        bindRecent();
+        bindFavourites();
+    }
+
+    private void bindDaily() {
+        Calendar c = Calendar.getInstance();
+        int seed = c.get(Calendar.YEAR) * 400 + c.get(Calendar.DAY_OF_YEAR);
+        Bhajan b = all.get(seed % all.size());
+        tvDailyTitle.setText(b.titleNepali);
+        tvDailyType.setText(b.type);
+        tvDailyType.setVisibility(b.type == null || b.type.isEmpty() ? View.GONE : View.VISIBLE);
+        cardDaily.setVisibility(View.VISIBLE);
+        cardDaily.setOnClickListener(v -> openBhajan(b));
+    }
+
+    private void bindCategories() {
+        categoriesContainer.removeAllViews();
+        LayoutInflater inflater = LayoutInflater.from(this);
+        for (int i = 0; i < BhajanCategories.KEYS.length; i++) {
+            int count = 0;
+            for (Bhajan b : all) if (BhajanCategories.KEYS[i].equalsIgnoreCase(b.category)) count++;
+            if (count == 0) continue;
+
+            View tile = inflater.inflate(R.layout.item_home_category, categoriesContainer, false);
+            tile.setBackgroundResource(BhajanCategories.GRADIENTS[i]);
+            ((TextView) tile.findViewById(R.id.tv_cat_name)).setText(BhajanCategories.NEPALI[i]);
+            ((TextView) tile.findViewById(R.id.tv_cat_en)).setText(BhajanCategories.ENGLISH[i]);
+            ((TextView) tile.findViewById(R.id.tv_cat_count)).setText(count + (count == 1 ? " bhajan" : " bhajans"));
+            final String english = BhajanCategories.ENGLISH[i];
+            tile.setOnClickListener(v ->
+                    startActivity(LibraryActivity.intent(this, english, LibraryActivity.TAB_ALL, false)));
+            categoriesContainer.addView(tile);
         }
     }
 
-    private void hideKeyboard() {
-        InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-        if (imm != null) imm.hideSoftInputFromWindow(etSearch.getWindowToken(), 0);
-    }
-
-    private void loadData() {
-        Executors.newSingleThreadExecutor().execute(() -> {
-            try {
-                JSONArray arr = new JSONArray(Helper.readRaw(this, R.raw.bhajan_list));
-                List<Bhajan> temp = new ArrayList<>();
-                for (int i = 0; i < arr.length(); i++) {
-                    JSONObject o = arr.getJSONObject(i);
-                    temp.add(new Bhajan(Helper.getJson(o, "id"), Helper.getJson(o, "bhajan_nepali"),
-                            Helper.getJson(o, "bhajan_english"), Helper.getJson(o, "bhajan"),
-                            Helper.getJson(o, "bhajan_type")));
-                }
-                all = Helper.sortNepali(temp);
-                runOnUiThread(this::refresh);
-            } catch (Exception e) { e.printStackTrace(); }
-        });
-    }
-
-    private void refresh() {
-        String q = etSearch.getText().toString().trim().toLowerCase();
-        List<Bhajan> base = new ArrayList<>();
-        if (currentTab == 0) {
-            rvCategories.setVisibility(View.VISIBLE);
-            for (Bhajan b : all)
-                if (category.equals("All") || (b.category != null && b.category.equalsIgnoreCase(category))) base.add(b);
-        } else {
-            rvCategories.setVisibility(View.GONE);
-            if (currentTab == 1) {
-                for (String id : Helper.getRecentIds(this))
-                    for (Bhajan b : all) if (b.id.equals(id)) { base.add(b); break; }
-            } else {
-                for (Bhajan b : all) if (Helper.isFav(this, b.id)) base.add(b);
-            }
+    private void bindRecent() {
+        recentContainer.removeAllViews();
+        int shown = 0;
+        for (String id : Helper.getRecentIds(this)) {
+            Bhajan b = BhajanRepo.find(all, id);
+            if (b == null) continue;
+            recentContainer.addView(makeCard(b, recentContainer));
+            if (++shown >= MAX_HORIZONTAL_CARDS) break;
         }
+        sectionRecent.setVisibility(shown > 0 ? View.VISIBLE : View.GONE);
+    }
 
-        List<Bhajan> out = new ArrayList<>();
-        for (Bhajan b : base)
-            if (q.isEmpty() || (b.titleNepali != null && b.titleNepali.toLowerCase().contains(q))
-                    || (b.titleEnglish != null && b.titleEnglish.toLowerCase().contains(q))) out.add(b);
+    private void bindFavourites() {
+        favContainer.removeAllViews();
+        int shown = 0;
+        for (Bhajan b : all) {
+            if (!Helper.isFav(this, b.id)) continue;
+            favContainer.addView(makeCard(b, favContainer));
+            if (++shown >= MAX_HORIZONTAL_CARDS) break;
+        }
+        scrollFav.setVisibility(shown > 0 ? View.VISIBLE : View.GONE);
+        favEmpty.setVisibility(shown > 0 ? View.GONE : View.VISIBLE);
+    }
 
-        adapter.update(out);
-        tvCount.setText(out.size() + " bhajans");
-        tvFavCount.setText(Helper.favCount(this) + " favourites");
-        boolean showClear = (currentTab == 1 || currentTab == 2);
-        btnClearAll.setVisibility(showClear ? View.VISIBLE : View.GONE);
-        tvFavCount.setVisibility(showClear ? View.GONE : View.VISIBLE);
+    private View makeCard(Bhajan b, LinearLayout parent) {
+        View card = LayoutInflater.from(this).inflate(R.layout.item_home_card, parent, false);
+        TextView tag = card.findViewById(R.id.tv_card_tag);
+        tag.setBackgroundResource(BhajanCategories.gradientFor(b.category));
+        tag.setText(BhajanCategories.nepaliFor(b.category));
+        ((TextView) card.findViewById(R.id.tv_card_title)).setText(b.titleNepali);
+        ((TextView) card.findViewById(R.id.tv_card_type)).setText(b.type);
+        card.setOnClickListener(v -> openBhajan(b));
+        return card;
+    }
+
+    private void openBhajan(Bhajan b) {
+        Intent i = new Intent(this, DetailActivity.class);
+        i.putExtra("ID", b.id);
+        i.putExtra("TITLE", b.titleNepali);
+        startActivity(i);
+    }
+
+    private void updateNowPlaying(boolean isPlaying, String title) {
+        if (cardNowPlaying == null) return;
+        boolean has = title != null && !title.isEmpty();
+        cardNowPlaying.setVisibility(has ? View.VISIBLE : View.GONE);
+        if (has) tvNowTitle.setText(title);
+        btnNowPlay.setImageResource(isPlaying ? R.drawable.ic_pause : R.drawable.ic_play_arrow);
+    }
+
+    private String greeting() {
+        int h = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        String text;
+        if (h < 5) text = "\u0936\u0941\u092D \u0930\u093E\u0924\u094D\u0930\u093F";            // शुभ रात्रि
+        else if (h < 12) text = "\u0936\u0941\u092D \u092A\u094D\u0930\u092D\u093E\u0924";      // शुभ प्रभात
+        else if (h < 17) text = "\u0936\u0941\u092D \u0926\u093F\u0928";                        // शुभ दिन
+        else if (h < 20) text = "\u0936\u0941\u092D \u0938\u0928\u094D\u0927\u094D\u092F\u093E"; // शुभ सन्ध्या
+        else text = "\u0936\u0941\u092D \u0930\u093E\u0924\u094D\u0930\u093F";                  // शुभ रात्रि
+        return text + " \uD83D\uDE4F";
     }
 
     @Override
     public void onBackPressed() {
-        if (etSearch.hasFocus()) { hideKeyboard(); etSearch.clearFocus(); return; }
-        if (etSearch.getText().length() > 0) { etSearch.setText(""); return; }
         long now = System.currentTimeMillis();
         if (backOnce && (now - lastBack) <= 2000) {
             super.onBackPressed();
         } else {
             backOnce = true; lastBack = now;
-            Toast.makeText(this, "Double press to exit", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Press back again to exit", Toast.LENGTH_SHORT).show();
             backHandler.postDelayed(() -> backOnce = false, 2000);
         }
     }

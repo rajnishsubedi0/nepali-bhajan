@@ -15,6 +15,13 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.VH> {
     private List<String> cats; private Context ctx; private OnClick l; private int sel = 0;
     public CategoryAdapter(List<String> cats, Context ctx, OnClick l) { this.cats = cats; this.ctx = ctx; this.l = l; }
 
+    /** Selects a chip from outside (e.g. when Home opens Library on a deity). */
+    public void setSelected(String cat) {
+        int idx = cats.indexOf(cat);
+        if (idx < 0 || idx == sel) return;
+        int old = sel; sel = idx;
+        notifyItemChanged(old); notifyItemChanged(sel);
+    }
 
     @NonNull @Override public VH onCreateViewHolder(@NonNull ViewGroup p, int v) {
         return new VH(LayoutInflater.from(ctx).inflate(R.layout.item_category, p, false));
@@ -22,7 +29,7 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.VH> {
     @Override public void onBindViewHolder(@NonNull VH h, int p) {
         h.t.setText(cats.get(p));
         boolean s = p == sel;
-        h.t.setBackgroundResource(s ? R.drawable.bg_button_accent : R.drawable.bg_pill);
+        h.t.setBackgroundResource(s ? R.drawable.bg_chip_selected : R.drawable.bg_pill);
         h.t.setTextColor(ctx.getColor(s ? R.color.on_accent : R.color.text_secondary));
         h.t.setOnClickListener(v -> {
             int pos = h.getAdapterPosition();

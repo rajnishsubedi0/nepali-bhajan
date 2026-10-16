@@ -80,7 +80,7 @@ public class AudioAdapter extends RecyclerView.Adapter<AudioAdapter.VH> {
 
         boolean isThisTrack = track.id != null && track.id.equals(currentPlayingId);
 
-        h.row.setBackgroundColor(isThisTrack ? ctx.getColor(R.color.muted) : 0x00000000);
+        h.row.setBackgroundResource(isThisTrack ? R.drawable.bg_card_playing : R.drawable.bg_card);
 
         if (isThisTrack) {
             h.play.setImageResource(isPlaying ? R.drawable.ic_pause : R.drawable.ic_play_arrow);

@@ -272,10 +272,17 @@ public class Helper {
     public static String getYouTubeLink(Context ctx, String bhajanId) {
         try {
             int resId = ctx.getResources().getIdentifier(
-                    "youtube_links",
+                    "youtube_link",
                     "raw",
                     ctx.getPackageName()
             );
+            if (resId == 0) {
+                resId = ctx.getResources().getIdentifier(
+                        "youtube_links",
+                        "raw",
+                        ctx.getPackageName()
+                );
+            }
 
             if (resId == 0) return null;
 

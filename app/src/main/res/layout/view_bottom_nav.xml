@@ -2,45 +2,87 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/bottom_nav"
     android:layout_width="match_parent"
-    android:layout_height="64dp"
-    android:background="@color/card"
-    android:elevation="8dp"
-    android:orientation="horizontal">
+    android:layout_height="68dp"
+    android:background="@drawable/bg_nav"
+    android:elevation="12dp"
+    android:orientation="horizontal"
+    android:paddingStart="8dp"
+    android:paddingEnd="8dp">
+
+    <LinearLayout
+        android:id="@+id/nav_home"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:orientation="vertical">
+        <FrameLayout
+            android:id="@+id/nav_home_pill"
+            android:layout_width="56dp"
+            android:layout_height="32dp">
+            <ImageView
+                android:id="@+id/nav_home_icon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_home" />
+        </FrameLayout>
+        <TextView
+            android:id="@+id/nav_home_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="Home"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
     <LinearLayout
         android:id="@+id/nav_lyrics"
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        android:background="?attr/selectableItemBackground"
         android:gravity="center"
         android:orientation="vertical">
-        <ImageView
-            android:id="@+id/nav_lyrics_icon"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_book" />
+        <FrameLayout
+            android:id="@+id/nav_lyrics_pill"
+            android:layout_width="56dp"
+            android:layout_height="32dp">
+            <ImageView
+                android:id="@+id/nav_lyrics_icon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_book" />
+        </FrameLayout>
         <TextView
             android:id="@+id/nav_lyrics_label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="Lyrics"
+            android:text="Library"
             android:textSize="11sp"
             android:textStyle="bold" />
     </LinearLayout>
+
     <LinearLayout
         android:id="@+id/nav_audio"
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        android:background="?attr/selectableItemBackground"
         android:gravity="center"
         android:orientation="vertical">
-        <ImageView
-            android:id="@+id/nav_audio_icon"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_music_note" />
+        <FrameLayout
+            android:id="@+id/nav_audio_pill"
+            android:layout_width="56dp"
+            android:layout_height="32dp">
+            <ImageView
+                android:id="@+id/nav_audio_icon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_music_note" />
+        </FrameLayout>
         <TextView
             android:id="@+id/nav_audio_label"
             android:layout_width="wrap_content"
@@ -50,19 +92,25 @@
             android:textSize="11sp"
             android:textStyle="bold" />
     </LinearLayout>
+
     <LinearLayout
         android:id="@+id/nav_settings"
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        android:background="?attr/selectableItemBackground"
         android:gravity="center"
         android:orientation="vertical">
-        <ImageView
-            android:id="@+id/nav_settings_icon"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_settings" />
+        <FrameLayout
+            android:id="@+id/nav_settings_pill"
+            android:layout_width="56dp"
+            android:layout_height="32dp">
+            <ImageView
+                android:id="@+id/nav_settings_icon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_settings" />
+        </FrameLayout>
         <TextView
             android:id="@+id/nav_settings_label"
             android:layout_width="wrap_content"

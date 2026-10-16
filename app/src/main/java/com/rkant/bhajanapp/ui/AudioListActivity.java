@@ -167,7 +167,7 @@ public class AudioListActivity extends AppCompatActivity
         Helper.applyTheme(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_audio_list);
-        BottomNav.setup(this, 1);
+        BottomNav.setup(this, BottomNav.AUDIO);
 
         requestNotificationPermission();
         BatteryHelper.showGuideIfNeeded(this);
@@ -547,7 +547,7 @@ public class AudioListActivity extends AppCompatActivity
         if (miniPlayer == null || bottomBar == null) return;
         float density = getResources().getDisplayMetrics().density;
         boolean barVisible = bottomBar.getVisibility() == View.VISIBLE;
-        int bottomMargin = (int) ((barVisible ? 70 : 14) * density);
+        int bottomMargin = (int) ((barVisible ? 80 + 56 : 80) * density);
         int sideMargin = (int) (14 * density);
 
         FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) miniPlayer.getLayoutParams();

@@ -1,14 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bg">#EDF1F6</color>
-    <color name="card">#F8FAFC</color>
-    <color name="card_border">#E3EAF2</color>
-    <color name="text_primary">#12396B</color>
-    <color name="text_secondary">#8CA0B3</color>
-    <color name="accent">#33A5EE</color>
+    <color name="bg">#F4F8FE</color>
+    <color name="card">#FFFFFF</color>
+    <color name="card_border">#E4ECF7</color>
+    <color name="text_primary">#10213F</color>
+    <color name="text_secondary">#7A8AA3</color>
+    <color name="accent">#2185F5</color>
+    <color name="accent_light">#4FB6FF</color>
     <color name="on_accent">#FFFFFF</color>
+    <color name="on_gradient">#FFFFFF</color>
     <color name="green">#18A04B</color>
-    <color name="red">#D94550</color>
-    <color name="muted">#E4EBF3</color>
-    <color name="divider">#E3EAF2</color>
+    <color name="red">#E5484D</color>
+    <color name="muted">#EAF2FD</color>
+    <color name="divider">#E8EFF8</color>
+
+    <!-- Deity category gradients (same in light and dark) -->
+    <color name="grad_krishna_start">#2185F5</color>
+    <color name="grad_krishna_end">#4FB6FF</color>
+    <color name="grad_shiva_start">#5B5BD6</color>
+    <color name="grad_shiva_end">#8E8CFF</color>
+    <color name="grad_hari_start">#0E9AA7</color>
+    <color name="grad_hari_end">#47D1C1</color>
+    <color name="grad_ram_start">#F2762E</color>
+    <color name="grad_ram_end">#FFA45C</color>
+    <color name="grad_other_start">#D9467A</color>
+    <color name="grad_other_end">#FF8FA8</color>
 </resources>
