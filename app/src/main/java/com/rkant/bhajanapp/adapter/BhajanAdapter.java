@@ -123,8 +123,8 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
     private void setupSwipe(VH h, Bhajan b) {
         final float density = ctx.getResources().getDisplayMetrics().density;
         final float revealWidth = 90 * density;
-        final float threshold = 120 * density;    // decisive swipe needed
-        final float startSlop = 22 * density;     // finger must travel this far first
+        final float threshold = 150 * density;    // raised: was 120dp. Needs a decisive swipe.
+        final float startSlop = 26 * density;     // raised: was 22dp
         final float[] startX = {0};
         final float[] startY = {0};
         final boolean[] swiping = {false};
@@ -157,7 +157,7 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
                 case MotionEvent.ACTION_MOVE:
                     float dx = event.getRawX() - startX[0];
                     float dy = event.getRawY() - startY[0];
-                    if (!swiping[0] && Math.abs(dx) > startSlop && Math.abs(dx) > Math.abs(dy) * 2f) {
+                    if (!swiping[0] && Math.abs(dx) > startSlop && Math.abs(dx) > Math.abs(dy) * 2.2f) {
                         swiping[0] = true;
                         // Swipe wins: kill the long-press for good.
                         swipeHandler.removeCallbacks(longPress);
@@ -200,12 +200,10 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
         });
     }
 
-    /** Swipe / reveal now only REQUESTS archiving; the activity asks for a category. */
+    /** Swipe archives DIRECTLY into "All Archived" — no category question. */
     private void doArchive(Bhajan b, VH h) {
-        h.cardContainer.animate().translationX(0).setDuration(120).start();
-        h.archiveReveal.setVisibility(View.GONE);
-        h.tvArchiveAction.setOnClickListener(null);
-        h.archiveReveal.setOnClickListener(null);
+        Helper.toggleArchive(ctx, b.id);
+        Toast.makeText(ctx, "Bhajan archived", Toast.LENGTH_SHORT).show();
         if (archiveListener != null) {
             archiveListener.onArchived(b.id);
         }
@@ -228,6 +226,7 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
                         }
                     });
         } else {
+            // Heart button adds directly — no category question
             Helper.toggleFav(ctx, b.id);
             Toast.makeText(ctx, "Added to favourites", Toast.LENGTH_SHORT).show();
             if (favListener != null) {

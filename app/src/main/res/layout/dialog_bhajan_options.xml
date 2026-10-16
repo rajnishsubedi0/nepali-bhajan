@@ -51,7 +51,7 @@
         android:layout_marginTop="10dp"
         android:background="@drawable/bg_pill"
         android:gravity="center"
-        android:text="Add to Favourites"
+        android:text="Add to Favourite Category"
         android:textColor="@color/text_primary"
         android:textSize="15sp"
         android:textStyle="bold" />
@@ -63,7 +63,7 @@
         android:layout_marginTop="10dp"
         android:background="@drawable/bg_pill"
         android:gravity="center"
-        android:text="Archive"
+        android:text="Add to Archive Category"
         android:textColor="@color/text_primary"
         android:textSize="15sp"
         android:textStyle="bold" />
