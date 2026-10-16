@@ -2,9 +2,12 @@ package com.rkant.bhajanapp.adapter;
 
 import android.content.Context;
 import android.content.Intent;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -32,6 +35,7 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
     private OnArchiveChanged archiveListener;
     private OnBhajanOptions optionsListener;
     private boolean swipeArchiveEnabled = true;
+    private final Handler swipeHandler = new Handler(Looper.getMainLooper());
 
     public BhajanAdapter(List<Bhajan> list, Context ctx) {
         this.list = list;
@@ -70,9 +74,10 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
 
         h.row.setBackgroundResource(archived ? R.drawable.bg_card_archived : R.drawable.bg_card);
 
-        // Reset swipe state on bind
+        // Reset swipe state + any stale long-press timer from a recycled row
         h.cardContainer.setTranslationX(0);
         h.archiveReveal.setVisibility(View.GONE);
+        cancelPendingLongPress(h.row);
 
         h.row.setOnClickListener(v -> {
             if (Math.abs(h.cardContainer.getTranslationX()) > 1f) {
@@ -86,33 +91,58 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
             ctx.startActivity(i);
         });
 
-        // Long press → options sheet (works on every tab)
-        h.row.setOnLongClickListener(v -> {
-            int p = h.getAdapterPosition();
-            if (p != RecyclerView.NO_POSITION && optionsListener != null) {
-                optionsListener.onOptions(list.get(p), p);
-                return true;
-            }
-            return false;
-        });
-
         h.fav.setOnClickListener(v -> toggleFav(b, h));
 
         if (swipeArchiveEnabled && !archived) {
+            // Long press is handled inside the swipe gesture itself,
+            // so the options sheet can NEVER race with a swipe.
+            h.row.setOnLongClickListener(null);
             setupSwipe(h, b);
         } else {
             h.row.setOnTouchListener(null);
+            h.row.setOnLongClickListener(v -> {
+                int p = h.getAdapterPosition();
+                if (p != RecyclerView.NO_POSITION && optionsListener != null) {
+                    optionsListener.onOptions(list.get(p), p);
+                    return true;
+                }
+                return false;
+            });
+        }
+    }
+
+    /** Removes a pending long-press callback that a previous gesture left on this row. */
+    private void cancelPendingLongPress(View row) {
+        Object tag = row.getTag();
+        if (tag instanceof Runnable) {
+            swipeHandler.removeCallbacks((Runnable) tag);
+            row.setTag(null);
         }
     }
 
     private void setupSwipe(VH h, Bhajan b) {
         final float density = ctx.getResources().getDisplayMetrics().density;
         final float revealWidth = 90 * density;
-        final float threshold = 120 * density;   // decisive swipe needed
-        final float startSlop = 22 * density;    // finger must travel this far first
+        final float threshold = 120 * density;    // decisive swipe needed
+        final float startSlop = 22 * density;     // finger must travel this far first
         final float[] startX = {0};
         final float[] startY = {0};
         final boolean[] swiping = {false};
+        final boolean[] longPressFired = {false};
+
+        // Our own long-press timer: fully controlled by the swipe gesture.
+        final Runnable longPress = new Runnable() {
+            @Override
+            public void run() {
+                if (swiping[0]) return; // swipe already started -> never fire
+                int p = h.getAdapterPosition();
+                if (p != RecyclerView.NO_POSITION && optionsListener != null) {
+                    longPressFired[0] = true;
+                    optionsListener.onOptions(list.get(p), p);
+                }
+            }
+        };
+        h.row.setTag(longPress);
 
         h.row.setOnTouchListener((v, event) -> {
             switch (event.getActionMasked()) {
@@ -120,15 +150,17 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
                     startX[0] = event.getRawX();
                     startY[0] = event.getRawY();
                     swiping[0] = false;
-                    return false; // let click + long press still work
+                    longPressFired[0] = false;
+                    swipeHandler.removeCallbacks(longPress);
+                    swipeHandler.postDelayed(longPress, ViewConfiguration.getLongPressTimeout());
+                    return false; // let click still work
                 case MotionEvent.ACTION_MOVE:
                     float dx = event.getRawX() - startX[0];
                     float dy = event.getRawY() - startY[0];
                     if (!swiping[0] && Math.abs(dx) > startSlop && Math.abs(dx) > Math.abs(dy) * 2f) {
                         swiping[0] = true;
-                        // FIX: a swipe must never fire the long-press options sheet.
-                        // The pending long-press check only runs while the view is
-                        // pressed, so clearing the pressed state cancels it.
+                        // Swipe wins: kill the long-press for good.
+                        swipeHandler.removeCallbacks(longPress);
                         v.setPressed(false);
                         v.getParent().requestDisallowInterceptTouchEvent(true);
                     }
@@ -143,6 +175,7 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
                     return false;
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
+                    swipeHandler.removeCallbacks(longPress);
                     v.getParent().requestDisallowInterceptTouchEvent(false);
                     if (swiping[0]) {
                         float upDx = event.getRawX() - startX[0];
@@ -160,15 +193,19 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
                         return true;
                     }
                     swiping[0] = false;
-                    return false;
+                    // Block the click that would otherwise fire right after a long press
+                    return longPressFired[0];
             }
             return false;
         });
     }
 
+    /** Swipe / reveal now only REQUESTS archiving; the activity asks for a category. */
     private void doArchive(Bhajan b, VH h) {
-        Helper.toggleArchive(ctx, b.id);
-        Toast.makeText(ctx, "Bhajan archived", Toast.LENGTH_SHORT).show();
+        h.cardContainer.animate().translationX(0).setDuration(120).start();
+        h.archiveReveal.setVisibility(View.GONE);
+        h.tvArchiveAction.setOnClickListener(null);
+        h.archiveReveal.setOnClickListener(null);
         if (archiveListener != null) {
             archiveListener.onArchived(b.id);
         }

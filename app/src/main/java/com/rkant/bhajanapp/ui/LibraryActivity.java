@@ -100,10 +100,10 @@ public class LibraryActivity extends AppCompatActivity {
 
         adapter = new BhajanAdapter(new ArrayList<>(), this);
         adapter.setOnFavChanged(now -> refresh());
-        adapter.setOnArchiveChanged(id -> refresh());
+        // Swipe-to-archive now asks for an archive category instead of archiving instantly
+        adapter.setOnArchiveChanged(this::showArchiveRequest);
         adapter.setOnBhajanOptions((bhajan, position) -> showBhajanOptions(bhajan));
 
-        // Shared category-list adapter for Category tab + Favourite/Archive sub-categories
         bhajanCategoryAdapter = new BhajanCategoryAdapter(this, new BhajanCategoryAdapter.OnCategoryAction() {
             @Override
             public void onCategoryClick(String name) {
@@ -282,7 +282,7 @@ public class LibraryActivity extends AppCompatActivity {
     private void refresh() {
         if (adapter == null) return;
 
-        // ══ Category list views: Category tab, Favourite sub-categories, Archive sub-categories ══
+        // ══ Category list views ══
         if ((tab == TAB_CATEGORY && selectedCategory == null)
                 || (tab == TAB_FAV && showSubCategoryList)
                 || (tab == TAB_ARCHIVE && showSubCategoryList)) {
@@ -336,7 +336,6 @@ public class LibraryActivity extends AppCompatActivity {
                 if (b != null) base.add(b);
             }
         } else {
-            // TAB_ALL: exclude archived
             for (Bhajan b : all) {
                 if (!Helper.isArchived(this, b.id)) base.add(b);
             }
@@ -347,7 +346,6 @@ public class LibraryActivity extends AppCompatActivity {
 
         List<Bhajan> out = new ArrayList<>();
         for (Bhajan b : base) {
-            // Deity chip filter is skipped inside custom categories
             if (!customView && !BhajanRepo.inCategory(b, category)) continue;
             if (!BhajanRepo.matches(b, q)) continue;
             out.add(b);
@@ -385,7 +383,7 @@ public class LibraryActivity extends AppCompatActivity {
             } else if (tab == TAB_FAV) {
                 if (selectedSubCategory != null) {
                     tvEmptyTitle.setText("No bhajans here yet");
-                    tvEmptySub.setText("Long press any bhajan and choose \u201CAdd to Favourite Category\u201D.");
+                    tvEmptySub.setText("Long press any bhajan and choose \u201CAdd to Favourites\u201D.");
                 } else {
                     tvEmptyTitle.setText("No favourites yet");
                     tvEmptySub.setText("Tap the heart on any bhajan to save it here.");
@@ -393,7 +391,7 @@ public class LibraryActivity extends AppCompatActivity {
             } else if (tab == TAB_ARCHIVE) {
                 if (selectedSubCategory != null) {
                     tvEmptyTitle.setText("No bhajans here yet");
-                    tvEmptySub.setText("Long press any bhajan and choose \u201CAdd to Archive Category\u201D.");
+                    tvEmptySub.setText("Long press any bhajan and choose \u201CArchive\u201D.");
                 } else {
                     tvEmptyTitle.setText("No archived bhajans");
                     tvEmptySub.setText("Swipe a bhajan left or right in All or Recent to archive it.");
@@ -408,7 +406,6 @@ public class LibraryActivity extends AppCompatActivity {
         }
     }
 
-    /** Category list for Category tab / Favourites tab / Archived tab. */
     private void showCategoryList() {
         if (rvList.getAdapter() != bhajanCategoryAdapter) rvList.setAdapter(bhajanCategoryAdapter);
         adapter.setSwipeArchiveEnabled(false);
@@ -451,7 +448,7 @@ public class LibraryActivity extends AppCompatActivity {
         btnClearAll.setTextColor(getColor(R.color.accent));
         btnClearAll.setVisibility(View.VISIBLE);
 
-        boolean empty = names.isEmpty() && allName == null; // only possible on Category tab
+        boolean empty = names.isEmpty() && allName == null;
         emptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
         rvList.setVisibility(empty ? View.INVISIBLE : View.VISIBLE);
         if (empty) {
@@ -475,8 +472,6 @@ public class LibraryActivity extends AppCompatActivity {
         TextView sheetTitle = v.findViewById(R.id.sheet_title);
         TextView sheetSub = v.findViewById(R.id.sheet_sub);
         TextView sheetCategory = v.findViewById(R.id.sheet_category);
-        TextView sheetFavCategory = v.findViewById(R.id.sheet_fav_category);
-        TextView sheetArchiveCategory = v.findViewById(R.id.sheet_archive_category);
         TextView sheetFav = v.findViewById(R.id.sheet_fav);
         TextView sheetArchive = v.findViewById(R.id.sheet_archive);
         TextView sheetRemoveRecent = v.findViewById(R.id.sheet_remove_recent);
@@ -498,12 +493,10 @@ public class LibraryActivity extends AppCompatActivity {
             sheetSub.setVisibility(View.GONE);
         }
 
-        // Add to the three kinds of custom categories
+        // Add to the general custom category
         sheetCategory.setOnClickListener(x -> { dialog.dismiss(); showAddToCategoryDialog(b); });
-        sheetFavCategory.setOnClickListener(x -> { dialog.dismiss(); showAddToFavCategoryDialog(b); });
-        sheetArchiveCategory.setOnClickListener(x -> { dialog.dismiss(); showAddToArchiveCategoryDialog(b); });
 
-        // Favourite toggle (remove asks for confirmation)
+        // Favourite: adding ALWAYS asks which favourite category to save into
         if (fav) {
             sheetFav.setText("Remove from Favourites");
             sheetFav.setTextColor(getColor(R.color.accent));
@@ -511,15 +504,10 @@ public class LibraryActivity extends AppCompatActivity {
         } else {
             sheetFav.setText("Add to Favourites");
             sheetFav.setTextColor(getColor(R.color.text_primary));
-            sheetFav.setOnClickListener(x -> {
-                dialog.dismiss();
-                Helper.toggleFav(this, b.id);
-                Toast.makeText(this, "Added to favourites", Toast.LENGTH_SHORT).show();
-                refresh();
-            });
+            sheetFav.setOnClickListener(x -> { dialog.dismiss(); showAddToFavCategoryDialog(b); });
         }
 
-        // Archive / Unarchive (unarchive asks for confirmation)
+        // Archive: archiving ALWAYS asks which archive category to file into
         if (archived) {
             sheetArchive.setText("Unarchive");
             sheetArchive.setOnClickListener(x -> {
@@ -534,12 +522,7 @@ public class LibraryActivity extends AppCompatActivity {
             });
         } else {
             sheetArchive.setText("Archive");
-            sheetArchive.setOnClickListener(x -> {
-                dialog.dismiss();
-                Helper.toggleArchive(this, b.id);
-                Toast.makeText(this, "Bhajan archived", Toast.LENGTH_SHORT).show();
-                refresh();
-            });
+            sheetArchive.setOnClickListener(x -> { dialog.dismiss(); showAddToArchiveCategoryDialog(b); });
         }
 
         // Remove from Recent — whenever this bhajan is in recent history
@@ -553,28 +536,13 @@ public class LibraryActivity extends AppCompatActivity {
             });
         }
 
-        // Remove from the currently opened custom category (any of the three kinds)
-        String removeCategoryName = null;
-        int removeKind = -1;
+        // Remove from category ONLY inside the general Category tab
         if (tab == TAB_CATEGORY && selectedCategory != null) {
-            removeCategoryName = selectedCategory;
-            removeKind = KIND_GENERAL;
-        } else if (tab == TAB_FAV && !showSubCategoryList && selectedSubCategory != null) {
-            removeCategoryName = selectedSubCategory;
-            removeKind = KIND_FAV;
-        } else if (tab == TAB_ARCHIVE && !showSubCategoryList && selectedSubCategory != null) {
-            removeCategoryName = selectedSubCategory;
-            removeKind = KIND_ARCHIVE;
-        }
-        if (removeCategoryName != null) {
-            final String catName = removeCategoryName;
-            final int kind = removeKind;
+            final String catName = selectedCategory;
             sheetRemoveCategory.setVisibility(View.VISIBLE);
             sheetRemoveCategory.setOnClickListener(x -> {
                 dialog.dismiss();
-                if (kind == KIND_GENERAL) Helper.removeFromBhajanCategory(this, catName, b.id);
-                else if (kind == KIND_FAV) Helper.removeFromFavCategory(this, catName, b.id);
-                else Helper.removeFromArchiveCategory(this, catName, b.id);
+                Helper.removeFromBhajanCategory(this, catName, b.id);
                 Toast.makeText(this, "Removed from \u201C" + catName + "\u201D", Toast.LENGTH_SHORT).show();
                 refresh();
             });
@@ -593,6 +561,13 @@ public class LibraryActivity extends AppCompatActivity {
                     Toast.makeText(this, "Removed from favourites", Toast.LENGTH_SHORT).show();
                     refresh();
                 });
+    }
+
+    /** Swipe-to-archive lands here: ask for the archive category. */
+    private void showArchiveRequest(String bhajanId) {
+        Bhajan b = BhajanRepo.find(all, bhajanId);
+        if (b == null) { refresh(); return; }
+        showAddToArchiveCategoryDialog(b);
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -624,13 +599,14 @@ public class LibraryActivity extends AppCompatActivity {
         if (names.isEmpty()) { showCreateCategoryDialog(b, KIND_FAV); return; }
         names.add("+ Create new category");
         new AlertDialog.Builder(this)
-                .setTitle("Add to Favourite Category")
+                .setTitle("Save to Favourite Category")
                 .setItems(names.toArray(new String[0]), (dialog, which) -> {
                     if (which == names.size() - 1) {
                         showCreateCategoryDialog(b, KIND_FAV);
                     } else {
                         Helper.addToFavCategory(this, names.get(which), b.id);
-                        Toast.makeText(this, "Added to \u201C" + names.get(which) + "\u201D", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Added to favourites \u00B7 \u201C" + names.get(which) + "\u201D",
+                                Toast.LENGTH_SHORT).show();
                         refresh();
                     }
                 })
@@ -644,13 +620,14 @@ public class LibraryActivity extends AppCompatActivity {
         if (names.isEmpty()) { showCreateCategoryDialog(b, KIND_ARCHIVE); return; }
         names.add("+ Create new category");
         new AlertDialog.Builder(this)
-                .setTitle("Add to Archive Category")
+                .setTitle("Archive to Category")
                 .setItems(names.toArray(new String[0]), (dialog, which) -> {
                     if (which == names.size() - 1) {
                         showCreateCategoryDialog(b, KIND_ARCHIVE);
                     } else {
                         Helper.addToArchiveCategory(this, names.get(which), b.id);
-                        Toast.makeText(this, "Archived to \u201C" + names.get(which) + "\u201D", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Archived \u00B7 \u201C" + names.get(which) + "\u201D",
+                                Toast.LENGTH_SHORT).show();
                         refresh();
                     }
                 })
@@ -675,7 +652,8 @@ public class LibraryActivity extends AppCompatActivity {
                         Helper.createFavCategory(this, name);
                         if (bhajanToAdd != null) {
                             Helper.addToFavCategory(this, name, bhajanToAdd.id);
-                            Toast.makeText(this, "Added to \u201C" + name + "\u201D", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, "Added to favourites \u00B7 \u201C" + name + "\u201D",
+                                    Toast.LENGTH_SHORT).show();
                         } else {
                             Toast.makeText(this, "Category created", Toast.LENGTH_SHORT).show();
                         }
@@ -683,7 +661,8 @@ public class LibraryActivity extends AppCompatActivity {
                         Helper.createArchiveCategory(this, name);
                         if (bhajanToAdd != null) {
                             Helper.addToArchiveCategory(this, name, bhajanToAdd.id);
-                            Toast.makeText(this, "Archived to \u201C" + name + "\u201D", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, "Archived \u00B7 \u201C" + name + "\u201D",
+                                    Toast.LENGTH_SHORT).show();
                         } else {
                             Toast.makeText(this, "Category created", Toast.LENGTH_SHORT).show();
                         }
@@ -709,7 +688,7 @@ public class LibraryActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        // Step 1: search focused OR has text → drop keyboard/focus and clear query
+        // Step 1: search focused OR has text
         if (etSearch.hasFocus() || etSearch.getText().length() > 0) {
             hideKeyboard();
             etSearch.clearFocus();
@@ -723,7 +702,7 @@ public class LibraryActivity extends AppCompatActivity {
             refresh();
             return;
         }
-        // Step 3: inside Favourites/Archived (all or a sub-category) → back to their category list
+        // Step 3: inside Favourites/Archived → back to their category list
         if ((tab == TAB_FAV || tab == TAB_ARCHIVE) && !showSubCategoryList) {
             showSubCategoryList = true;
             selectedSubCategory = null;
