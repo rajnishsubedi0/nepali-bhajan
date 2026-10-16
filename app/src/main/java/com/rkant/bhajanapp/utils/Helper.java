@@ -48,9 +48,8 @@ public class Helper {
     }
 
     public static int getThemeMode(Context ctx) {
-        return ctx.getSharedPreferences(PREF_SETTINGS, Context.MODE_PRIVATE).getInt("theme_mode", 0);
+        return ctx.getSharedPreferences(PREF_SETTINGS, Context.MODE_PRIVATE).getInt("theme_mode", 1);
     }
-
     public static void setThemeMode(Context ctx, int mode) {
         ctx.getSharedPreferences(PREF_SETTINGS, Context.MODE_PRIVATE).edit().putInt("theme_mode", mode).apply();
     }
@@ -126,6 +125,18 @@ public class Helper {
     }
 
     public static int archivedCount(Context ctx) { return getArchivedSet(ctx).size(); }
+    // ═══════════════════════════════════════════════════════════
+    // SHOW ARCHIVED IN LIST SETTING (default OFF)
+    // ═══════════════════════════════════════════════════════════
+    public static boolean isArchivedInListEnabled(Context ctx) {
+        return ctx.getSharedPreferences(PREF_SETTINGS, Context.MODE_PRIVATE)
+                .getBoolean("archived_in_list", false);
+    }
+
+    public static void setArchivedInListEnabled(Context ctx, boolean value) {
+        ctx.getSharedPreferences(PREF_SETTINGS, Context.MODE_PRIVATE)
+                .edit().putBoolean("archived_in_list", value).apply();
+    }
 
     // ═══════════════════════════════════════════════════════════
     // SEARCH ARCHIVED SETTING

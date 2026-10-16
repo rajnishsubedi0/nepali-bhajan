@@ -21,6 +21,8 @@ public class SettingsActivity extends AppCompatActivity {
     private TextView tvListSize, tvLyricSize, tvPreview;
     private TextView tvLibraryRecentValue, tvAudioRecentValue;
     private Switch switchArchivedSearch;
+    private Switch switchArchivedInList;
+
     private final int[] timeoutValues = {1, 3, 5, 10, -1};
     private final int[] recentLimitOptions = {5, 10, 15, 20, 25, 30};
 
@@ -44,15 +46,16 @@ public class SettingsActivity extends AppCompatActivity {
         tvLibraryRecentValue = findViewById(R.id.tv_library_recent_value);
         tvAudioRecentValue = findViewById(R.id.tv_audio_recent_value);
         switchArchivedSearch = findViewById(R.id.switch_archived_search);
+        switchArchivedInList = findViewById(R.id.switch_archived_in_list);
 
         ((TextView) findViewById(R.id.tv_version)).setText("Version " + BuildConfig.VERSION_NAME);
 
         themeBtns = new TextView[]{
-            findViewById(R.id.btn_system), findViewById(R.id.btn_light), findViewById(R.id.btn_dark)
+                findViewById(R.id.btn_system), findViewById(R.id.btn_light), findViewById(R.id.btn_dark)
         };
         timeoutBtns = new TextView[]{
-            findViewById(R.id.btn_t1), findViewById(R.id.btn_t3), findViewById(R.id.btn_t5),
-            findViewById(R.id.btn_t10), findViewById(R.id.btn_talways)
+                findViewById(R.id.btn_t1), findViewById(R.id.btn_t3), findViewById(R.id.btn_t5),
+                findViewById(R.id.btn_t10), findViewById(R.id.btn_talways)
         };
 
         for (int i = 0; i < 3; i++) {
@@ -77,7 +80,6 @@ public class SettingsActivity extends AppCompatActivity {
         findViewById(R.id.btn_lyric_minus).setOnClickListener(v -> { lyricScale = clamp(lyricScale - 1); Helper.setLyricFontScale(this, lyricScale); update(); });
         findViewById(R.id.btn_lyric_plus).setOnClickListener(v -> { lyricScale = clamp(lyricScale + 1); Helper.setLyricFontScale(this, lyricScale); update(); });
 
-        // Recent limit controls
         findViewById(R.id.btn_library_recent_minus).setOnClickListener(v -> {
             libraryRecentLimit = cycleRecentLimit(libraryRecentLimit, -1);
             Helper.setLibraryRecentLimit(this, libraryRecentLimit);
@@ -104,6 +106,16 @@ public class SettingsActivity extends AppCompatActivity {
         switchArchivedSearch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             Helper.setArchivedSearchable(this, isChecked);
             Toast.makeText(this, isChecked ? "Archived bhajans will appear in search" : "Archived bhajans hidden from search",
+                    Toast.LENGTH_SHORT).show();
+        });
+
+        // Archive-in-list switch (default OFF)
+        switchArchivedInList.setChecked(Helper.isArchivedInListEnabled(this));
+        switchArchivedInList.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            Helper.setArchivedInListEnabled(this, isChecked);
+            Toast.makeText(this, isChecked
+                            ? "Archived bhajans will stay visible in the list"
+                            : "Archived bhajans will be hidden from the list",
                     Toast.LENGTH_SHORT).show();
         });
 
@@ -144,7 +156,6 @@ public class SettingsActivity extends AppCompatActivity {
     private void update() {
         for (int i = 0; i < 3; i++) style(themeBtns[i], themeMode == i);
         for (int i = 0; i < timeoutBtns.length; i++) style(timeoutBtns[i], timeout == timeoutValues[i]);
-
         tvListSize.setText(Helper.scaleName(listScale) + " (" + (int) Helper.scaleSp(listScale, false) + "sp)");
         tvLyricSize.setText(Helper.scaleName(lyricScale) + " (" + (int) Helper.scaleSp(lyricScale, true) + "sp)");
         tvPreview.setTextSize(Helper.scaleSp(lyricScale, true));
