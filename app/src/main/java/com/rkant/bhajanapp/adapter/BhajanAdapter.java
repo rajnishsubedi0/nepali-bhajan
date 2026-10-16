@@ -24,11 +24,13 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
 
     public interface OnFavChanged { void onChanged(boolean nowFavourite); }
     public interface OnArchiveChanged { void onArchived(String bhajanId); }
+    public interface OnBhajanOptions { void onOptions(Bhajan bhajan, int position); }
 
     private List<Bhajan> list;
     private final Context ctx;
     private OnFavChanged favListener;
     private OnArchiveChanged archiveListener;
+    private OnBhajanOptions optionsListener;
     private boolean swipeArchiveEnabled = true;
 
     public BhajanAdapter(List<Bhajan> list, Context ctx) {
@@ -43,6 +45,7 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
 
     public void setOnFavChanged(OnFavChanged l) { this.favListener = l; }
     public void setOnArchiveChanged(OnArchiveChanged l) { this.archiveListener = l; }
+    public void setOnBhajanOptions(OnBhajanOptions l) { this.optionsListener = l; }
     public void setSwipeArchiveEnabled(boolean e) { this.swipeArchiveEnabled = e; }
 
     @NonNull
@@ -63,10 +66,8 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
         h.title.setTextSize(Helper.listTitleSize(ctx));
         h.sub.setText(b.type);
         h.sub.setVisibility(b.type == null || b.type.isEmpty() ? View.GONE : View.VISIBLE);
-
         bindHeart(h.fav, fav);
 
-        // Archived items get light red background
         h.row.setBackgroundResource(archived ? R.drawable.bg_card_archived : R.drawable.bg_card);
 
         // Reset swipe state on bind
@@ -85,9 +86,18 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
             ctx.startActivity(i);
         });
 
+        // Long press → options sheet (works on every tab)
+        h.row.setOnLongClickListener(v -> {
+            int p = h.getAdapterPosition();
+            if (p != RecyclerView.NO_POSITION && optionsListener != null) {
+                optionsListener.onOptions(list.get(p), p);
+                return true;
+            }
+            return false;
+        });
+
         h.fav.setOnClickListener(v -> toggleFav(b, h));
 
-        // Setup swipe-to-archive
         if (swipeArchiveEnabled && !archived) {
             setupSwipe(h, b);
         } else {
@@ -97,12 +107,12 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
 
     private void setupSwipe(VH h, Bhajan b) {
         final float density = ctx.getResources().getDisplayMetrics().density;
-        final float revealWidth = 90 * density;  // how far card slides
-        final float threshold = 50 * density;    // min swipe to trigger
+        final float revealWidth = 90 * density;
+        final float threshold = 120 * density;   // decisive swipe needed
+        final float startSlop = 22 * density;    // finger must travel this far first
         final float[] startX = {0};
         final float[] startY = {0};
         final boolean[] swiping = {false};
-        final boolean[] revealed = {false};
 
         h.row.setOnTouchListener((v, event) -> {
             switch (event.getActionMasked()) {
@@ -110,44 +120,39 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
                     startX[0] = event.getRawX();
                     startY[0] = event.getRawY();
                     swiping[0] = false;
-                    return false; // let click still work
-
+                    return false; // let click + long press still work
                 case MotionEvent.ACTION_MOVE:
                     float dx = event.getRawX() - startX[0];
                     float dy = event.getRawY() - startY[0];
-
-                    if (!swiping[0] && Math.abs(dx) > 12 * density && Math.abs(dx) > Math.abs(dy) * 1.5f) {
+                    if (!swiping[0] && Math.abs(dx) > startSlop && Math.abs(dx) > Math.abs(dy) * 2f) {
                         swiping[0] = true;
+                        // FIX: a swipe must never fire the long-press options sheet.
+                        // The pending long-press check only runs while the view is
+                        // pressed, so clearing the pressed state cancels it.
+                        v.setPressed(false);
                         v.getParent().requestDisallowInterceptTouchEvent(true);
                     }
-
                     if (swiping[0]) {
                         float shift = Math.max(-revealWidth, Math.min(revealWidth, dx));
                         h.cardContainer.setTranslationX(shift);
-                        if (Math.abs(shift) > 15 * density) {
+                        if (Math.abs(shift) > 24 * density) {
                             h.archiveReveal.setVisibility(View.VISIBLE);
                         }
                         return true;
                     }
                     return false;
-
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
                     v.getParent().requestDisallowInterceptTouchEvent(false);
                     if (swiping[0]) {
                         float upDx = event.getRawX() - startX[0];
                         if (Math.abs(upDx) > threshold) {
-                            // Hold at reveal position
                             float holdX = upDx > 0 ? revealWidth : -revealWidth;
                             h.cardContainer.animate().translationX(holdX).setDuration(120).start();
                             h.archiveReveal.setVisibility(View.VISIBLE);
-                            revealed[0] = true;
-
-                            // Archive action on tap of reveal area
                             h.tvArchiveAction.setOnClickListener(av -> doArchive(b, h));
                             h.archiveReveal.setOnClickListener(av -> doArchive(b, h));
                         } else {
-                            // Snap back
                             h.cardContainer.animate().translationX(0).setDuration(120).start();
                             h.archiveReveal.setVisibility(View.GONE);
                         }
@@ -170,15 +175,30 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
     }
 
     private void toggleFav(Bhajan b, VH h) {
-        Helper.toggleFav(ctx, b.id);
-        boolean now = Helper.isFav(ctx, b.id);
-        Toast.makeText(ctx, now ? "Added to favourites" : "Removed from favourites",
-                Toast.LENGTH_SHORT).show();
-        if (favListener != null) {
-            favListener.onChanged(now);
+        boolean currentlyFav = Helper.isFav(ctx, b.id);
+        if (currentlyFav) {
+            // Removing needs confirmation
+            Helper.showConfirm(ctx, "Remove from Favourites",
+                    "Remove \u201C" + b.titleNepali + "\u201D from your favourite list?",
+                    "Remove", true, () -> {
+                        Helper.toggleFav(ctx, b.id);
+                        Toast.makeText(ctx, "Removed from favourites", Toast.LENGTH_SHORT).show();
+                        if (favListener != null) {
+                            favListener.onChanged(false);
+                        } else {
+                            int p = h.getAdapterPosition();
+                            if (p != RecyclerView.NO_POSITION) notifyItemChanged(p);
+                        }
+                    });
         } else {
-            int p = h.getAdapterPosition();
-            if (p != RecyclerView.NO_POSITION) notifyItemChanged(p);
+            Helper.toggleFav(ctx, b.id);
+            Toast.makeText(ctx, "Added to favourites", Toast.LENGTH_SHORT).show();
+            if (favListener != null) {
+                favListener.onChanged(true);
+            } else {
+                int p = h.getAdapterPosition();
+                if (p != RecyclerView.NO_POSITION) notifyItemChanged(p);
+            }
         }
     }
 
@@ -188,13 +208,12 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
     }
 
     @Override
-    public int getItemCount() { return list.size(); }
+    public int getItemCount() { return list == null ? 0 : list.size(); }
 
     static class VH extends RecyclerView.ViewHolder {
         TextView number, title, sub, tvArchiveAction;
         ImageView fav;
         View row, cardContainer, archiveReveal;
-
         VH(View v) {
             super(v);
             row = v.findViewById(R.id.row);

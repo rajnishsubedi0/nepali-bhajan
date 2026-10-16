@@ -75,13 +75,24 @@ public class DetailActivity extends AppCompatActivity {
 
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
         findViewById(R.id.btn_share).setOnClickListener(v -> ImageSharer.shareBhajan(this, title, lyrics));
-
         updateFavIcon();
+
+        // Add = instant, Remove = confirmation (kept in sync with the library heart)
         btnFav.setOnClickListener(v -> {
-            Helper.toggleFav(this, bhajanId);
-            updateFavIcon();
-            Toast.makeText(this, Helper.isFav(this, bhajanId) ? "Added to favourites" : "Removed from favourites",
-                    Toast.LENGTH_SHORT).show();
+            if (Helper.isFav(this, bhajanId)) {
+                Helper.showConfirm(this, "Remove from Favourites",
+                        "Remove \u201C" + title + "\u201D from your favourite list?",
+                        "Remove", true, () -> {
+                            Helper.toggleFav(DetailActivity.this, bhajanId);
+                            updateFavIcon();
+                            Toast.makeText(DetailActivity.this, "Removed from favourites",
+                                    Toast.LENGTH_SHORT).show();
+                        });
+            } else {
+                Helper.toggleFav(this, bhajanId);
+                updateFavIcon();
+                Toast.makeText(this, "Added to favourites", Toast.LENGTH_SHORT).show();
+            }
         });
 
         ImageView btnYoutube = findViewById(R.id.btn_youtube);
@@ -91,7 +102,7 @@ public class DetailActivity extends AppCompatActivity {
                 if (link != null && !link.isEmpty()) {
                     btnYoutube.setVisibility(View.VISIBLE);
                     btnYoutube.setOnClickListener(v -> Helper.showConfirm(this, "Play on YouTube",
-                            "Watch \"" + title + "\" on YouTube?", "Open", false, () -> {
+                            "Watch \u201C" + title + "\u201D on YouTube?", "Open", false, () -> {
                                 try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(link))); }
                                 catch (Exception e) { Toast.makeText(this, "Cannot open link", Toast.LENGTH_SHORT).show(); }
                             }));
@@ -103,7 +114,6 @@ public class DetailActivity extends AppCompatActivity {
         findViewById(R.id.btn_font_plus).setOnClickListener(v -> changeFont(1));
 
         btnAutoScroll.setOnClickListener(v -> { if (autoScrolling) stopAutoScroll(); else startAutoScroll(); });
-
         tvSpeed.setOnClickListener(v -> {
             speedLevel = (speedLevel + 1) % SCROLL_DP_PER_TICK.length;
             updateSpeedLabel();

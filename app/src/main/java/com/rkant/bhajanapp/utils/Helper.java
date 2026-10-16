@@ -94,9 +94,12 @@ public class Helper {
     public static void toggleArchive(Context ctx, String id) {
         if (id == null) return;
         Set<String> set = new HashSet<>(getArchivedSet(ctx));
-        if (set.contains(id)) set.remove(id);
+        boolean removing = set.contains(id);
+        if (removing) set.remove(id);
         else set.add(id);
         ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit().putStringSet("archived", set).apply();
+        // Sync: unarchiving also removes it from every archive sub-category
+        if (removing) removeIdFromAllSubCategories(ctx, PREF_ARCHIVE_CATEGORIES, "archive_category_order", id);
     }
 
     public static boolean isArchived(Context ctx, String id) {
@@ -109,12 +112,14 @@ public class Helper {
         Set<String> set = new HashSet<>(getArchivedSet(ctx));
         set.remove(id);
         ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit().putStringSet("archived", set).apply();
+        // Sync: unarchiving also removes it from every archive sub-category
+        removeIdFromAllSubCategories(ctx, PREF_ARCHIVE_CATEGORIES, "archive_category_order", id);
     }
 
     public static void clearArchived(Context ctx) {
         ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit().remove("archived").apply();
+        clearAllSubCategoryContents(ctx, PREF_ARCHIVE_CATEGORIES);
     }
-
     private static Set<String> getArchivedSet(Context ctx) {
         return new HashSet<>(ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE)
                 .getStringSet("archived", new HashSet<>()));
@@ -303,15 +308,19 @@ public class Helper {
     public static void toggleFav(Context ctx, String id) {
         if (id == null) return;
         Set<String> set = getFavouriteSet(ctx);
-        if (set.contains(id)) set.remove(id);
+        boolean removing = set.contains(id);
+        if (removing) set.remove(id);
         else set.add(id);
         ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit().putStringSet("favs", set).apply();
+        // Sync: removing a favourite also removes it from every favourite sub-category
+        if (removing) removeIdFromAllSubCategories(ctx, PREF_FAV_CATEGORIES, "fav_category_order", id);
     }
 
     public static int favCount(Context ctx) { return getFavouriteSet(ctx).size(); }
 
     public static void clearFavs(Context ctx) {
         ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit().remove("favs").apply();
+        clearAllSubCategoryContents(ctx, PREF_FAV_CATEGORIES);
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -481,5 +490,251 @@ public class Helper {
             e.printStackTrace();
             if (onConfirm != null) onConfirm.run();
         }
+    }
+    // ═══════════════════════════════════════════════════════════
+    // REMOVE A SINGLE BHAJAN FROM RECENT
+    // ═══════════════════════════════════════════════════════════
+    public static void removeRecent(Context ctx, String id) {
+        if (id == null || id.isEmpty()) return;
+        List<String> recents = new ArrayList<>(getRecentIds(ctx));
+        if (recents.remove(id)) {
+            ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit()
+                    .putString("recents", TextUtils.join(",", recents)).apply();
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // CUSTOM BHAJAN CATEGORIES (ditto copy of custom playlists)
+    // ═══════════════════════════════════════════════════════════
+    private static final String PREF_CATEGORIES = "bhajan_categories";
+
+    public static String sanitizeCategoryName(String name) {
+        if (name == null) return "";
+        return name.replace(",", " ").replace("\n", " ").trim();
+    }
+
+    private static List<String> getCategoryOrder(Context ctx) {
+        String stored = ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).getString("category_order", "");
+        List<String> result = new ArrayList<>();
+        if (stored == null || stored.isEmpty()) return result;
+        for (String name : stored.split(",")) if (!name.trim().isEmpty()) result.add(name.trim());
+        return result;
+    }
+
+    private static void saveCategoryOrder(Context ctx, List<String> order) {
+        ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit()
+                .putString("category_order", TextUtils.join(",", order)).apply();
+    }
+
+    public static Map<String, List<String>> getBhajanCategories(Context ctx) {
+        Map<String, List<String>> result = new LinkedHashMap<>();
+        SharedPreferences categoryPrefs = ctx.getSharedPreferences(PREF_CATEGORIES, Context.MODE_PRIVATE);
+        List<String> order = getCategoryOrder(ctx);
+        for (String name : order) {
+            if (categoryPrefs.contains(name)) {
+                result.put(name, parsePlaylistIds(categoryPrefs.getString(name, "")));
+            }
+        }
+        for (Map.Entry<String, ?> entry : categoryPrefs.getAll().entrySet()) {
+            if (!result.containsKey(entry.getKey())) {
+                result.put(entry.getKey(), parsePlaylistIds((String) entry.getValue()));
+            }
+        }
+        return result;
+    }
+
+    public static void createBhajanCategory(Context ctx, String rawName) {
+        String name = sanitizeCategoryName(rawName);
+        if (name.isEmpty()) return;
+        SharedPreferences categoryPrefs = ctx.getSharedPreferences(PREF_CATEGORIES, Context.MODE_PRIVATE);
+        if (!categoryPrefs.contains(name)) categoryPrefs.edit().putString(name, "").apply();
+        List<String> order = getCategoryOrder(ctx);
+        if (!order.contains(name)) { order.add(0, name); saveCategoryOrder(ctx, order); }
+    }
+
+    public static void deleteBhajanCategory(Context ctx, String rawName) {
+        String name = sanitizeCategoryName(rawName);
+        if (name.isEmpty()) return;
+        ctx.getSharedPreferences(PREF_CATEGORIES, Context.MODE_PRIVATE).edit().remove(name).apply();
+        List<String> order = getCategoryOrder(ctx);
+        if (order.contains(name)) { order.remove(name); saveCategoryOrder(ctx, order); }
+    }
+
+    public static void addToBhajanCategory(Context ctx, String rawName, String bhajanId) {
+        String name = sanitizeCategoryName(rawName);
+        if (name.isEmpty() || bhajanId == null || bhajanId.isEmpty()) return;
+        createBhajanCategory(ctx, name);
+        SharedPreferences categoryPrefs = ctx.getSharedPreferences(PREF_CATEGORIES, Context.MODE_PRIVATE);
+        List<String> ids = parsePlaylistIds(categoryPrefs.getString(name, ""));
+        if (!ids.contains(bhajanId)) {
+            ids.add(bhajanId);
+            categoryPrefs.edit().putString(name, TextUtils.join(",", ids)).apply();
+        }
+    }
+
+    public static void removeFromBhajanCategory(Context ctx, String rawName, String bhajanId) {
+        String name = sanitizeCategoryName(rawName);
+        if (name.isEmpty() || bhajanId == null || bhajanId.isEmpty()) return;
+        SharedPreferences categoryPrefs = ctx.getSharedPreferences(PREF_CATEGORIES, Context.MODE_PRIVATE);
+        List<String> ids = parsePlaylistIds(categoryPrefs.getString(name, ""));
+        if (ids.contains(bhajanId)) {
+            ids.remove(bhajanId);
+            categoryPrefs.edit().putString(name, TextUtils.join(",", ids)).apply();
+        }
+    }
+    // ═══════════════════════════════════════════════════════════
+    // FAVOURITE SUB-CATEGORIES & ARCHIVE SUB-CATEGORIES
+    // ═══════════════════════════════════════════════════════════
+    private static final String PREF_FAV_CATEGORIES = "bhajan_fav_categories";
+    private static final String PREF_ARCHIVE_CATEGORIES = "bhajan_archive_categories";
+
+    public static void ensureFav(Context ctx, String id) {
+        if (id == null) return;
+        Set<String> set = getFavouriteSet(ctx);
+        if (!set.contains(id)) {
+            set.add(id);
+            ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit().putStringSet("favs", set).apply();
+        }
+    }
+
+    public static void ensureArchived(Context ctx, String id) {
+        if (id == null) return;
+        Set<String> set = new HashSet<>(getArchivedSet(ctx));
+        if (!set.contains(id)) {
+            set.add(id);
+            ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit().putStringSet("archived", set).apply();
+        }
+    }
+
+    // ── generic core ──
+    private static List<String> getSubCategoryOrder(Context ctx, String orderKey) {
+        String stored = ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).getString(orderKey, "");
+        List<String> result = new ArrayList<>();
+        if (stored == null || stored.isEmpty()) return result;
+        for (String name : stored.split(",")) if (!name.trim().isEmpty()) result.add(name.trim());
+        return result;
+    }
+
+    private static void saveSubCategoryOrder(Context ctx, String orderKey, List<String> order) {
+        ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit()
+                .putString(orderKey, TextUtils.join(",", order)).apply();
+    }
+
+    private static Map<String, List<String>> getSubCategories(Context ctx, String prefsName, String orderKey) {
+        Map<String, List<String>> result = new LinkedHashMap<>();
+        SharedPreferences prefs = ctx.getSharedPreferences(prefsName, Context.MODE_PRIVATE);
+        List<String> order = getSubCategoryOrder(ctx, orderKey);
+        for (String name : order) {
+            if (prefs.contains(name)) result.put(name, parsePlaylistIds(prefs.getString(name, "")));
+        }
+        for (Map.Entry<String, ?> entry : prefs.getAll().entrySet()) {
+            if (!result.containsKey(entry.getKey())) {
+                result.put(entry.getKey(), parsePlaylistIds((String) entry.getValue()));
+            }
+        }
+        return result;
+    }
+
+    private static void createSubCategory(Context ctx, String prefsName, String orderKey, String rawName) {
+        String name = sanitizeCategoryName(rawName);
+        if (name.isEmpty()) return;
+        SharedPreferences prefs = ctx.getSharedPreferences(prefsName, Context.MODE_PRIVATE);
+        if (!prefs.contains(name)) prefs.edit().putString(name, "").apply();
+        List<String> order = getSubCategoryOrder(ctx, orderKey);
+        if (!order.contains(name)) { order.add(0, name); saveSubCategoryOrder(ctx, orderKey, order); }
+    }
+
+    private static void deleteSubCategory(Context ctx, String prefsName, String orderKey, String rawName) {
+        String name = sanitizeCategoryName(rawName);
+        if (name.isEmpty()) return;
+        ctx.getSharedPreferences(prefsName, Context.MODE_PRIVATE).edit().remove(name).apply();
+        List<String> order = getSubCategoryOrder(ctx, orderKey);
+        if (order.contains(name)) { order.remove(name); saveSubCategoryOrder(ctx, orderKey, order); }
+    }
+
+    private static void addToSubCategory(Context ctx, String prefsName, String orderKey, String rawName, String id) {
+        String name = sanitizeCategoryName(rawName);
+        if (name.isEmpty() || id == null || id.isEmpty()) return;
+        createSubCategory(ctx, prefsName, orderKey, name);
+        SharedPreferences prefs = ctx.getSharedPreferences(prefsName, Context.MODE_PRIVATE);
+        List<String> ids = parsePlaylistIds(prefs.getString(name, ""));
+        if (!ids.contains(id)) {
+            ids.add(id);
+            prefs.edit().putString(name, TextUtils.join(",", ids)).apply();
+        }
+    }
+
+    private static void removeFromSubCategory(Context ctx, String prefsName, String orderKey, String rawName, String id) {
+        String name = sanitizeCategoryName(rawName);
+        if (name.isEmpty() || id == null || id.isEmpty()) return;
+        SharedPreferences prefs = ctx.getSharedPreferences(prefsName, Context.MODE_PRIVATE);
+        List<String> ids = parsePlaylistIds(prefs.getString(name, ""));
+        if (ids.contains(id)) {
+            ids.remove(id);
+            prefs.edit().putString(name, TextUtils.join(",", ids)).apply();
+        }
+    }
+
+    private static void removeIdFromAllSubCategories(Context ctx, String prefsName, String orderKey, String id) {
+        if (id == null || id.isEmpty()) return;
+        SharedPreferences prefs = ctx.getSharedPreferences(prefsName, Context.MODE_PRIVATE);
+        for (String name : new ArrayList<>(prefs.getAll().keySet())) {
+            List<String> ids = parsePlaylistIds(prefs.getString(name, ""));
+            if (ids.contains(id)) {
+                ids.remove(id);
+                prefs.edit().putString(name, TextUtils.join(",", ids)).apply();
+            }
+        }
+    }
+
+    private static void clearAllSubCategoryContents(Context ctx, String prefsName) {
+        SharedPreferences prefs = ctx.getSharedPreferences(prefsName, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        for (String name : prefs.getAll().keySet()) editor.putString(name, "");
+        editor.apply();
+    }
+
+    // ── favourite sub-categories (public) ──
+    public static Map<String, List<String>> getFavCategories(Context ctx) {
+        return getSubCategories(ctx, PREF_FAV_CATEGORIES, "fav_category_order");
+    }
+
+    public static void createFavCategory(Context ctx, String name) {
+        createSubCategory(ctx, PREF_FAV_CATEGORIES, "fav_category_order", name);
+    }
+
+    public static void deleteFavCategory(Context ctx, String name) {
+        deleteSubCategory(ctx, PREF_FAV_CATEGORIES, "fav_category_order", name);
+    }
+
+    public static void addToFavCategory(Context ctx, String name, String id) {
+        addToSubCategory(ctx, PREF_FAV_CATEGORIES, "fav_category_order", name, id);
+        ensureFav(ctx, id); // sync: being inside a favourite category means it is a favourite
+    }
+
+    public static void removeFromFavCategory(Context ctx, String name, String id) {
+        removeFromSubCategory(ctx, PREF_FAV_CATEGORIES, "fav_category_order", name, id);
+    }
+
+    // ── archive sub-categories (public) ──
+    public static Map<String, List<String>> getArchiveCategories(Context ctx) {
+        return getSubCategories(ctx, PREF_ARCHIVE_CATEGORIES, "archive_category_order");
+    }
+
+    public static void createArchiveCategory(Context ctx, String name) {
+        createSubCategory(ctx, PREF_ARCHIVE_CATEGORIES, "archive_category_order", name);
+    }
+
+    public static void deleteArchiveCategory(Context ctx, String name) {
+        deleteSubCategory(ctx, PREF_ARCHIVE_CATEGORIES, "archive_category_order", name);
+    }
+
+    public static void addToArchiveCategory(Context ctx, String name, String id) {
+        addToSubCategory(ctx, PREF_ARCHIVE_CATEGORIES, "archive_category_order", name, id);
+        ensureArchived(ctx, id); // sync: being inside an archive category means it is archived
+    }
+
+    public static void removeFromArchiveCategory(Context ctx, String name, String id) {
+        removeFromSubCategory(ctx, PREF_ARCHIVE_CATEGORIES, "archive_category_order", name, id);
     }
 }
