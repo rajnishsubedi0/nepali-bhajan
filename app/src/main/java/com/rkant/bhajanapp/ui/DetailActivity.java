@@ -9,24 +9,28 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.rkant.bhajanapp.R;
 import com.rkant.bhajanapp.adapter.LyricAdapter;
 import com.rkant.bhajanapp.model.Bhajan;
 import com.rkant.bhajanapp.utils.BhajanRepo;
 import com.rkant.bhajanapp.utils.Helper;
 import com.rkant.bhajanapp.utils.ImageSharer;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 
 public class DetailActivity extends AppCompatActivity {
+
     private static final long SCROLL_TICK_MS = 30L;
-    // dp scrolled per tick for 1x / 2x / 3x
     private static final float[] SCROLL_DP_PER_TICK = {0.6f, 1.2f, 2.0f};
 
     private String bhajanId, title;
@@ -35,7 +39,6 @@ public class DetailActivity extends AppCompatActivity {
     private RecyclerView rv;
     private ImageView btnFav, btnAutoScroll;
     private TextView tvSpeed;
-
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean autoScrolling = false;
     private int speedLevel = 0;
@@ -58,6 +61,7 @@ public class DetailActivity extends AppCompatActivity {
         Helper.applyTheme(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detail);
+
         bhajanId = getIntent().getStringExtra("ID");
         title = getIntent().getStringExtra("TITLE");
         Helper.addRecent(this, bhajanId);
@@ -93,7 +97,6 @@ public class DetailActivity extends AppCompatActivity {
             });
         });
 
-        // Reader toolbar: text size + auto scroll
         findViewById(R.id.btn_font_minus).setOnClickListener(v -> changeFont(-1));
         findViewById(R.id.btn_font_plus).setOnClickListener(v -> changeFont(1));
         btnAutoScroll.setOnClickListener(v -> { if (autoScrolling) stopAutoScroll(); else startAutoScroll(); });
@@ -101,16 +104,16 @@ public class DetailActivity extends AppCompatActivity {
             speedLevel = (speedLevel + 1) % SCROLL_DP_PER_TICK.length;
             updateSpeedLabel();
         });
+
         rv.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override public void onScrollStateChanged(RecyclerView r, int newState) {
-                // The reader grabbed the list: hand control back to them.
                 if (newState == RecyclerView.SCROLL_STATE_DRAGGING && autoScrolling) stopAutoScroll();
             }
         });
+
         updateSpeedLabel();
         updateAutoScrollIcon();
 
-        // Screen timeout: default 3 min, customizable (-1 = always on)
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         int mins = Helper.getScreenTimeout(this);
         if (mins > 0) {
@@ -170,7 +173,8 @@ public class DetailActivity extends AppCompatActivity {
     private void updateFavIcon() {
         boolean fav = Helper.isFav(this, bhajanId);
         btnFav.setImageResource(fav ? R.drawable.ic_heart_filled : R.drawable.ic_heart_outline);
-        btnFav.setColorFilter(getColor(fav ? R.color.red : R.color.text_secondary));
+        // Accent color keeps the favourite state on-theme (no red).
+        btnFav.setColorFilter(getColor(fav ? R.color.accent : R.color.text_secondary));
     }
 
     private void loadLyrics() {

@@ -474,7 +474,7 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
 
         if (isFav) {
             btnFav.setImageResource(R.drawable.ic_heart_filled);
-            btnFav.setColorFilter(getColor(R.color.red));
+            btnFav.setColorFilter(getColor(R.color.accent));
         } else {
             btnFav.setImageResource(R.drawable.ic_heart_outline);
             btnFav.setColorFilter(getColor(R.color.text_secondary));

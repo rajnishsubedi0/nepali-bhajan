@@ -52,6 +52,8 @@ import com.rkant.bhajanapp.utils.DownloadHelper;
 import com.rkant.bhajanapp.utils.BottomNav;
 import com.rkant.bhajanapp.utils.Helper;
 import com.rkant.bhajanapp.utils.PlaybackManager;
+import com.rkant.bhajanapp.utils.SearchEngine;
+import com.rkant.bhajanapp.utils.SearchEngine;
 import com.rkant.bhajanapp.utils.SheetBus;
 
 import java.io.File;
@@ -102,7 +104,10 @@ public class AudioListActivity extends AppCompatActivity
 
     // Swipe to dismiss mini player
     private float downX = 0;
+    private float downY = 0;
     private boolean isSwiping = false;
+    private int swipeSlopPx = 0;
+    private int dismissThresholdPx = 0;
 
     private ConnectivityManager connectivityManager;
     private ConnectivityManager.NetworkCallback networkCallback;
@@ -390,7 +395,8 @@ public class AudioListActivity extends AppCompatActivity
             for (AudioTrack t : allTracks) if (t.isDownloaded) displayedTracks.add(t);
         } else if (currentFilter == FILTER_RECENT) {
             List<String> recentIds = Helper.getAudioRecentIds(this);
-            if (recentIds.size() > 10) recentIds = recentIds.subList(0, 10);
+        int recentLimit = Helper.getAudioRecentLimit(this);
+        if (recentIds.size() > recentLimit) recentIds = new ArrayList<>(recentIds.subList(0, recentLimit));
             for (String id : recentIds) {
                 for (AudioTrack t : allTracks) {
                     if (t.id.equals(id)) { displayedTracks.add(t); break; }
@@ -414,11 +420,9 @@ public class AudioListActivity extends AppCompatActivity
         }
 
         if (!audioQuery.isEmpty()) {
-            java.util.Iterator<AudioTrack> it = displayedTracks.iterator();
-            while (it.hasNext()) {
-                AudioTrack t = it.next();
-                if (t.title == null || !t.title.toLowerCase().contains(audioQuery)) it.remove();
-            }
+            List<AudioTrack> searched = SearchEngine.searchTracks(displayedTracks, audioQuery);
+            displayedTracks.clear();
+            displayedTracks.addAll(searched);
         }
 
         audioAdapter.notifyDataSetChanged();
@@ -467,54 +471,64 @@ public class AudioListActivity extends AppCompatActivity
         miniTitle = findViewById(R.id.mini_title);
         miniProgress = findViewById(R.id.mini_progress);
         miniPlay = findViewById(R.id.mini_play);
-
         ImageView miniPrev = findViewById(R.id.mini_prev);
         ImageView miniNext = findViewById(R.id.mini_next);
         ImageView miniStop = findViewById(R.id.mini_stop);
 
-        // Handle both swipe and tap in one place to prevent conflicts
+        float density = getResources().getDisplayMetrics().density;
+        swipeSlopPx = (int) (14 * density);
+        dismissThresholdPx = (int) (180 * density);
+
         miniPlayer.setOnTouchListener((v, event) -> {
-            switch (event.getAction()) {
+            switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
                     downX = event.getRawX();
+                    downY = event.getRawY();
                     isSwiping = false;
-                    return true; // Consume DOWN to block OnClickListener from firing later
-
-                case MotionEvent.ACTION_MOVE:
-                    float moveDx = event.getRawX() - downX;
-                    if (Math.abs(moveDx) > 10) {
+                    return true;
+                case MotionEvent.ACTION_MOVE: {
+                    float dx = event.getRawX() - downX;
+                    float dy = event.getRawY() - downY;
+                    if (!isSwiping
+                            && Math.abs(dx) > swipeSlopPx
+                            && Math.abs(dx) > Math.abs(dy) * 1.4f) {
                         isSwiping = true;
-                        miniPlayer.setTranslationX(moveDx);
-                        miniPlayer.setAlpha(1 - Math.min(1, Math.abs(moveDx) / 300f));
+                    }
+                    if (isSwiping) {
+                        miniPlayer.setTranslationX(dx);
+                        float progress = Math.min(1f, Math.abs(dx) / (float) Math.max(1, miniPlayer.getWidth()));
+                        miniPlayer.setAlpha(1f - progress * 0.85f);
                     }
                     return true;
-
+                }
                 case MotionEvent.ACTION_UP:
-                case MotionEvent.ACTION_CANCEL:
+                case MotionEvent.ACTION_CANCEL: {
+                    float dx = event.getRawX() - downX;
+                    int width = Math.max(1, miniPlayer.getWidth());
                     if (isSwiping) {
-                        float upDx = event.getRawX() - downX;
-                        if (Math.abs(upDx) > 150) {
-                            stopAndHideMiniPlayer(upDx > 0 ? 500 : -500);
+                        boolean farEnough = Math.abs(dx) > width * 0.40f && Math.abs(dx) > dismissThresholdPx;
+                        if (farEnough) {
+                            stopAndHideMiniPlayer(dx > 0 ? width : -width);
                         } else {
-                            miniPlayer.animate().translationX(0).alpha(1).setDuration(200).start();
+                            miniPlayer.animate().translationX(0).alpha(1).setDuration(180).start();
                         }
                     } else {
-                        // It was a clean tap, not a swipe
-                        openPlayer();
+                        if (Math.abs(dx) <= swipeSlopPx) openPlayer();
                     }
                     downX = 0;
+                    downY = 0;
                     isSwiping = false;
                     return true;
+                }
             }
             return true;
         });
-
         miniPlay.setOnClickListener(v -> PlaybackManager.getInstance().playPause());
         miniPrev.setOnClickListener(v -> PlaybackManager.getInstance().prev());
         miniNext.setOnClickListener(v -> PlaybackManager.getInstance().next());
         miniStop.setOnClickListener(v -> stopAndHideMiniPlayer(0));
     }
-
+    
     private void updateMiniPlayer(boolean isPlaying, String title, String mediaId) {
         if (mediaId == null || mediaId.isEmpty()) {
             if (miniPlayer.getVisibility() != View.GONE) {

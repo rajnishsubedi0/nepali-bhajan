@@ -1,5 +1,6 @@
 package com.rkant.bhajanapp.ui;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
@@ -22,12 +23,13 @@ import com.rkant.bhajanapp.model.Bhajan;
 import com.rkant.bhajanapp.utils.BhajanRepo;
 import com.rkant.bhajanapp.utils.BottomNav;
 import com.rkant.bhajanapp.utils.Helper;
+import com.rkant.bhajanapp.utils.SearchEngine;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-/** Full bhajan library: search, deity chips and All / Recent / Favourites. */
+/** Full bhajan library: relevance search, deity chips and All / Recent / Favourites. */
 public class LibraryActivity extends AppCompatActivity {
 
     public static final String EXTRA_CATEGORY = "CATEGORY";
@@ -39,6 +41,7 @@ public class LibraryActivity extends AppCompatActivity {
     public static final int TAB_FAV = 2;
 
     private final List<String> cats = Arrays.asList("All", "Krishna", "Shiva", "Hari", "Ram", "Others");
+
     private List<Bhajan> all = new ArrayList<>();
     private String category = "All";
     private int tab = TAB_ALL;
@@ -51,7 +54,7 @@ public class LibraryActivity extends AppCompatActivity {
     private TextView tvCount, tvEmptyTitle, tvEmptySub;
     private TextView[] segments;
 
-    public static Intent intent(android.content.Context ctx, String category, int tab, boolean focusSearch) {
+    public static Intent intent(Context ctx, String category, int tab, boolean focusSearch) {
         Intent in = new Intent(ctx, LibraryActivity.class);
         in.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP
                 | Intent.FLAG_ACTIVITY_NO_ANIMATION);
@@ -100,6 +103,7 @@ public class LibraryActivity extends AppCompatActivity {
             etSearch.clearFocus();
             hideKeyboard();
         });
+
         etSearch.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
             public void onTextChanged(CharSequence s, int a, int b, int c) {
@@ -108,6 +112,7 @@ public class LibraryActivity extends AppCompatActivity {
             }
             public void afterTextChanged(Editable s) {}
         });
+
         etSearch.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                 hideKeyboard();
@@ -198,11 +203,14 @@ public class LibraryActivity extends AppCompatActivity {
         if (adapter == null) return;
         String q = etSearch.getText().toString().trim().toLowerCase();
 
+        // 1) Base set by tab
         List<Bhajan> base = new ArrayList<>();
         if (tab == TAB_RECENT) {
+            int limit = Helper.getRecentLimit(this);
+            int shown = 0;
             for (String id : Helper.getRecentIds(this)) {
                 Bhajan b = BhajanRepo.find(all, id);
-                if (b != null) base.add(b);
+                if (b != null) { base.add(b); if (++shown >= limit) break; }
             }
         } else if (tab == TAB_FAV) {
             for (Bhajan b : all) if (Helper.isFav(this, b.id)) base.add(b);
@@ -210,13 +218,14 @@ public class LibraryActivity extends AppCompatActivity {
             base.addAll(all);
         }
 
-        List<Bhajan> out = new ArrayList<>();
-        for (Bhajan b : base) {
-            if (BhajanRepo.inCategory(b, category) && BhajanRepo.matches(b, q)) out.add(b);
-        }
+        // 2) Category filter
+        List<Bhajan> catFiltered = new ArrayList<>();
+        for (Bhajan b : base) if (BhajanRepo.inCategory(b, category)) catFiltered.add(b);
+
+        // 3) Relevance search (tokenized + ranked)
+        List<Bhajan> out = SearchEngine.searchBhajans(catFiltered, q);
 
         adapter.update(out);
-
         String noun = out.size() == 1 ? "bhajan" : "bhajans";
         String where = "All".equals(category) ? "" : "  \u00B7  " + category;
         tvCount.setText(out.size() + " " + noun + where);
@@ -226,6 +235,7 @@ public class LibraryActivity extends AppCompatActivity {
         boolean empty = out.isEmpty() && !all.isEmpty();
         emptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
         rvList.setVisibility(empty ? View.INVISIBLE : View.VISIBLE);
+
         if (empty) {
             if (!q.isEmpty() || !"All".equals(category)) {
                 tvEmptyTitle.setText("No bhajans found");

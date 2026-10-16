@@ -407,7 +407,7 @@
                     android:background="@drawable/bg_badge"
                     android:padding="10dp"
                     android:src="@drawable/ic_heart_outline"
-                    android:tint="@color/red" />
+                    android:tint="@color/accent" />
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
