@@ -31,7 +31,7 @@ import java.util.concurrent.Executors;
 public class DetailActivity extends AppCompatActivity {
 
     private static final long SCROLL_TICK_MS = 30L;
-    // Added 0.3x and 0.5x for slower scrolling
+    // 0.3x, 0.5x, 1x, 2x, 3x
     private static final float[] SCROLL_DP_PER_TICK = {0.3f, 0.5f, 0.6f, 1.2f, 2.0f};
     private static final String[] SPEED_LABELS = {"0.3x", "0.5x", "1x", "2x", "3x"};
 
@@ -43,12 +43,11 @@ public class DetailActivity extends AppCompatActivity {
     private TextView tvSpeed;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean autoScrolling = false;
-    private int speedLevel = 2; // default 1x
+    private int speedLevel = 0; // DEFAULT = 0.3x
     private float scrollRemainder = 0f;
 
     private final Runnable scrollTick = new Runnable() {
-        @Override
-        public void run() {
+        @Override public void run() {
             if (!autoScrolling || rv == null) return;
             if (!rv.canScrollVertically(1)) { stopAutoScroll(); return; }
             float px = SCROLL_DP_PER_TICK[speedLevel] * getResources().getDisplayMetrics().density + scrollRemainder;
@@ -103,10 +102,7 @@ public class DetailActivity extends AppCompatActivity {
         findViewById(R.id.btn_font_minus).setOnClickListener(v -> changeFont(-1));
         findViewById(R.id.btn_font_plus).setOnClickListener(v -> changeFont(1));
 
-        btnAutoScroll.setOnClickListener(v -> {
-            if (autoScrolling) stopAutoScroll();
-            else startAutoScroll();
-        });
+        btnAutoScroll.setOnClickListener(v -> { if (autoScrolling) stopAutoScroll(); else startAutoScroll(); });
 
         tvSpeed.setOnClickListener(v -> {
             speedLevel = (speedLevel + 1) % SCROLL_DP_PER_TICK.length;
@@ -114,8 +110,7 @@ public class DetailActivity extends AppCompatActivity {
         });
 
         rv.addOnScrollListener(new RecyclerView.OnScrollListener() {
-            @Override
-            public void onScrollStateChanged(RecyclerView r, int newState) {
+            @Override public void onScrollStateChanged(RecyclerView r, int newState) {
                 if (newState == RecyclerView.SCROLL_STATE_DRAGGING && autoScrolling) stopAutoScroll();
             }
         });
@@ -182,7 +177,6 @@ public class DetailActivity extends AppCompatActivity {
     private void updateFavIcon() {
         boolean fav = Helper.isFav(this, bhajanId);
         btnFav.setImageResource(fav ? R.drawable.ic_heart_filled : R.drawable.ic_heart_outline);
-        // Use accent color instead of red
         btnFav.setColorFilter(getColor(fav ? R.color.accent : R.color.text_secondary));
     }
 

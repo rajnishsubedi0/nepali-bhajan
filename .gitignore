@@ -16,4 +16,6 @@ Thumbs.db
 *.html
 app/src/androidTest/
 app/src/test/
+*merge*
+
 

@@ -20,9 +20,7 @@ public class AudioAdapter extends RecyclerView.Adapter<AudioAdapter.VH> {
 
     public interface OnTrackAction {
         void onRowClick(AudioTrack track, int position);
-
         void onPlayPauseClick(AudioTrack track, int position);
-
         void onOptionsClick(AudioTrack track, int position);
     }
 
@@ -53,19 +51,18 @@ public class AudioAdapter extends RecyclerView.Adapter<AudioAdapter.VH> {
     @Override
     public void onBindViewHolder(@NonNull VH h, int position) {
         AudioTrack track = tracks.get(position);
-
         h.title.setText(track.title);
-
         if (track.durationSec > 0) {
             h.duration.setText(Helper.formatTime(track.durationSec * 1000L));
         } else {
             h.duration.setText("--:--");
         }
 
-        // Passive favourite indicator (not a button)
+        // Favourite indicator - use accent color instead of red
         h.favInd.setVisibility(track.isFavourite ? View.VISIBLE : View.GONE);
+        h.favInd.setColorFilter(ctx.getColor(R.color.accent));
 
-        // Passive download indicator (not a button)
+        // Download indicator
         if (track.isDownloaded) {
             h.dlInd.setVisibility(View.VISIBLE);
             h.dlInd.setImageResource(R.drawable.ic_check);
@@ -79,9 +76,7 @@ public class AudioAdapter extends RecyclerView.Adapter<AudioAdapter.VH> {
         }
 
         boolean isThisTrack = track.id != null && track.id.equals(currentPlayingId);
-
         h.row.setBackgroundResource(isThisTrack ? R.drawable.bg_card_playing : R.drawable.bg_card);
-
         if (isThisTrack) {
             h.play.setImageResource(isPlaying ? R.drawable.ic_pause : R.drawable.ic_play_arrow);
             h.play.setColorFilter(ctx.getColor(R.color.accent));

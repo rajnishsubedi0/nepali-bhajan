@@ -88,6 +88,55 @@ public class Helper {
     }
 
     // ═══════════════════════════════════════════════════════════
+    // ARCHIVED BHAJANS
+    // ═══════════════════════════════════════════════════════════
+
+    public static void toggleArchive(Context ctx, String id) {
+        if (id == null) return;
+        Set<String> set = new HashSet<>(getArchivedSet(ctx));
+        if (set.contains(id)) set.remove(id);
+        else set.add(id);
+        ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit().putStringSet("archived", set).apply();
+    }
+
+    public static boolean isArchived(Context ctx, String id) {
+        if (id == null) return false;
+        return getArchivedSet(ctx).contains(id);
+    }
+
+    public static void unarchive(Context ctx, String id) {
+        if (id == null) return;
+        Set<String> set = new HashSet<>(getArchivedSet(ctx));
+        set.remove(id);
+        ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit().putStringSet("archived", set).apply();
+    }
+
+    public static void clearArchived(Context ctx) {
+        ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit().remove("archived").apply();
+    }
+
+    private static Set<String> getArchivedSet(Context ctx) {
+        return new HashSet<>(ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE)
+                .getStringSet("archived", new HashSet<>()));
+    }
+
+    public static int archivedCount(Context ctx) { return getArchivedSet(ctx).size(); }
+
+    // ═══════════════════════════════════════════════════════════
+    // SEARCH ARCHIVED SETTING
+    // ═══════════════════════════════════════════════════════════
+
+    public static boolean isArchivedSearchable(Context ctx) {
+        return ctx.getSharedPreferences(PREF_SETTINGS, Context.MODE_PRIVATE)
+                .getBoolean("archived_searchable", false);
+    }
+
+    public static void setArchivedSearchable(Context ctx, boolean value) {
+        ctx.getSharedPreferences(PREF_SETTINGS, Context.MODE_PRIVATE)
+                .edit().putBoolean("archived_searchable", value).apply();
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // FONT SCALE
     // ═══════════════════════════════════════════════════════════
 
@@ -414,9 +463,14 @@ public class Helper {
             tvTitle.setText(title);
             tvMessage.setText(message);
             btnConfirm.setText(positiveText);
-            btnConfirm.setTextColor(ctx.getColor(destructive ? R.color.accent : R.color.on_accent));
 
-            AlertDialog dialog = new AlertDialog.Builder(ctx).setView(view).setCancelable(true).create();
+            AlertDialog dialog = new AlertDialog.Builder(ctx)
+                    .setView(view)
+                    .setCancelable(true)
+                    .create();
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+            }
             btnCancel.setOnClickListener(v -> dialog.dismiss());
             btnConfirm.setOnClickListener(v -> {
                 dialog.dismiss();

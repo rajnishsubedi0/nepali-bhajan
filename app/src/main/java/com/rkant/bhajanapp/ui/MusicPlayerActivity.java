@@ -9,9 +9,11 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -135,7 +137,6 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
         tvSpeed.setOnClickListener(v -> cyclePlaybackSpeed());
         tvSleep.setOnClickListener(v -> showSleepTimerDialog());
 
-        // Close button (X) at top right
         btnClose.setOnClickListener(v -> performClose());
 
         btnFav.setOnClickListener(v -> {
@@ -219,7 +220,6 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
     @Override
     public void onSheetRelease(float fraction, float velocityY) {
         if (closing) return;
-        // Reduced threshold from 0.35 to 0.18 for easier dismiss
         if (fraction > 0.18f || velocityY > 1000f) {
             performClose();
         } else {
@@ -344,7 +344,7 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
     }
 
     private void showSleepTimerDialog() {
-        String[] options = {"Off", "5 minutes", "15 minutes", "30 minutes", "45 minutes", "60 minutes"};
+        String[] options = {"Off", "5 minutes", "15 minutes", "30 minutes", "45 minutes", "60 minutes", "Custom\u2026"};
         new AlertDialog.Builder(this)
                 .setTitle("Sleep Timer")
                 .setItems(options, (dialog, which) -> {
@@ -352,6 +352,8 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
                     if (which == 0) {
                         pm.cancelSleepTimer();
                         Toast.makeText(this, "Sleep timer off", Toast.LENGTH_SHORT).show();
+                    } else if (which == 6) {
+                        showCustomSleepDialog();
                     } else {
                         int minutes;
                         if (which == 1) minutes = 5;
@@ -364,6 +366,35 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
                     }
                     updateSleepTimerLabel();
                 })
+                .show();
+    }
+
+    private void showCustomSleepDialog() {
+        EditText input = new EditText(this);
+        input.setHint("Minutes");
+        input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        input.setPadding(48, 32, 48, 16);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Custom Sleep Timer")
+                .setMessage("Enter sleep time in minutes:")
+                .setView(input)
+                .setPositiveButton("Set", (dialog, which) -> {
+                    try {
+                        int minutes = Integer.parseInt(input.getText().toString().trim());
+                        if (minutes <= 0) {
+                            Toast.makeText(this, "Please enter a valid number", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        if (minutes > 480) minutes = 480; // max 8 hours
+                        PlaybackManager.getInstance().setSleepTimer(minutes * 60000L);
+                        Toast.makeText(this, "Sleep timer: " + minutes + " minutes", Toast.LENGTH_SHORT).show();
+                        updateSleepTimerLabel();
+                    } catch (NumberFormatException e) {
+                        Toast.makeText(this, "Please enter a valid number", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
                 .show();
     }
 
