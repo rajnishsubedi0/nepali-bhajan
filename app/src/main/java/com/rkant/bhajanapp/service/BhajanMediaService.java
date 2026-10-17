@@ -57,6 +57,16 @@ public class BhajanMediaService extends MediaSessionService {
         // Force Next/Previous buttons in notification
         player = new ForwardingPlayer(exoPlayer) {
             @Override
+            public Player.Commands getAvailableCommands() {
+                // MediaSession builds the notification / lock-screen buttons from
+                // getAvailableCommands(); overriding isCommandAvailable() alone is not enough.
+                return super.getAvailableCommands().buildUpon()
+                        .addAll(Player.COMMAND_SEEK_TO_NEXT, Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
+                                Player.COMMAND_SEEK_TO_PREVIOUS, Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+                        .build();
+            }
+
+            @Override
             public boolean isCommandAvailable(@Player.Command int command) {
                 if (command == Player.COMMAND_SEEK_TO_NEXT || command == Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM ||
                         command == Player.COMMAND_SEEK_TO_PREVIOUS || command == Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM) {
@@ -73,8 +83,13 @@ public class BhajanMediaService extends MediaSessionService {
 
             @Override
             public void seekToPrevious() {
-                if (exoPlayer.hasPreviousMediaItem()) exoPlayer.seekToPrevious();
-                else if (exoPlayer.getMediaItemCount() > 0) exoPlayer.seekTo(exoPlayer.getMediaItemCount() - 1, 0);
+                // Standard behaviour: restart the current track when it has played for a while.
+                if (exoPlayer.hasPreviousMediaItem()
+                        || exoPlayer.getCurrentPosition() > exoPlayer.getMaxSeekToPreviousPosition()) {
+                    exoPlayer.seekToPrevious();
+                } else if (exoPlayer.getMediaItemCount() > 0) {
+                    exoPlayer.seekTo(exoPlayer.getMediaItemCount() - 1, 0);
+                }
             }
         };
 
@@ -113,9 +128,18 @@ public class BhajanMediaService extends MediaSessionService {
         }
 
         waitingForNetwork = false;
-        exoPlayer.setMediaItem(resumeItem);
-        exoPlayer.prepare();
-        if (resumePosition != C.TIME_UNSET && resumePosition > 0) exoPlayer.seekTo(resumePosition);
+        if (exoPlayer.getMediaItemCount() > 0) {
+            // The playlist is still loaded after the error: re-prepare it and go back to the
+            // item/position that failed. (setMediaItem() here would throw away the whole
+            // queue, so Next/Previous would stop working after every network drop.)
+            int index = exoPlayer.getCurrentMediaItemIndex();
+            exoPlayer.prepare();
+            if (resumePosition != C.TIME_UNSET && resumePosition > 0) exoPlayer.seekTo(index, resumePosition);
+        } else {
+            exoPlayer.setMediaItem(resumeItem);
+            exoPlayer.prepare();
+            if (resumePosition != C.TIME_UNSET && resumePosition > 0) exoPlayer.seekTo(resumePosition);
+        }
         exoPlayer.play();
 
         resumeItem = null;

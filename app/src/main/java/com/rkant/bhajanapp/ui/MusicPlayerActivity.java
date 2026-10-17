@@ -34,8 +34,6 @@ import com.rkant.bhajanapp.utils.Helper;
 import com.rkant.bhajanapp.utils.PlaybackManager;
 import com.rkant.bhajanapp.utils.SheetBus;
 
-import java.util.List;
-
 public class MusicPlayerActivity extends AppCompatActivity implements SheetDragLayout.DragCallback {
 
     public static volatile boolean isSheetOpen = false;
@@ -107,6 +105,10 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Every other screen applies the saved theme first. This one is also launched straight
+        // from the media notification (possibly as the first screen after a cold start), where
+        // it would otherwise ignore the Light/Dark choice from Settings.
+        Helper.applyTheme(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_music_player);
 
@@ -286,23 +288,22 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
     private void loadCurrentTrack() {
         final String id = currentMediaId;
         if (id == null) { btnDownload.setVisibility(View.GONE); return; }
-        AudioRepository.loadTracks(this, new AudioRepository.LoadCallback() {
-            @Override
-            public void onTracksLoaded(List<AudioTrack> tracks, boolean fromNetwork) {
-                runOnUiThread(() -> {
-                    if (!id.equals(currentMediaId)) return;
-                    for (AudioTrack t : tracks) {
-                        if (t.id.equals(id)) {
-                            currentTrack = t;
-                            updateDownloadButton();
-                            return;
-                        }
-                    }
-                });
+        // Read the local database only. This used to call AudioRepository.loadTracks(), which
+        // re-downloaded the whole audio manifest on every track change and download broadcast.
+        final Context app = getApplicationContext();
+        new Thread(() -> {
+            AudioDatabase db = AudioDatabase.getInstance(app);
+            AudioTrack track = db.getTrackById(id);
+            if (track != null) {
+                AudioRepository.reconcile(app, db, java.util.Collections.singletonList(track));
             }
-            @Override public void onError(String message) {}
-            @Override public void onComplete() {}
-        });
+            final AudioTrack result = track;
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed() || !id.equals(currentMediaId)) return;
+                currentTrack = result;
+                updateDownloadButton();
+            });
+        }).start();
     }
 
     private void updateDownloadButton() {
@@ -441,8 +442,8 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
         super.onStart();
         isSheetOpen = true;
         PlaybackManager.getInstance().connect(this);
-        PlaybackManager.getInstance().addListener(playbackListener);
         currentMediaId = PlaybackManager.getInstance().getCurrentMediaId();
+        PlaybackManager.getInstance().addListener(playbackListener);
         updateFavButton();
         updateSpeedLabel();
         updateSleepTimerLabel();

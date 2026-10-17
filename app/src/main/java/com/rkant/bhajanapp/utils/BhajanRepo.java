@@ -30,7 +30,7 @@ public final class BhajanRepo {
         final Context app = ctx.getApplicationContext();
         Executors.newSingleThreadExecutor().execute(() -> {
             List<Bhajan> list = parse(app);
-            cache = list;
+            if (!list.isEmpty()) cache = list;
             MAIN.post(() -> cb.onLoaded(list));
         });
     }

@@ -82,6 +82,23 @@ public class AudioDatabase extends SQLiteOpenHelper {
 
                 db.insertWithOnConflict(TABLE, null, cv, SQLiteDatabase.CONFLICT_REPLACE);
             }
+
+            // Tracks that were removed from the server manifest would otherwise stay in the
+            // list forever (and fail to stream). Keep them only if they are saved on the device.
+            java.util.Set<String> keep = new java.util.HashSet<>();
+            for (AudioTrack t : tracks) keep.add(t.id);
+            Cursor c = db.query(TABLE, new String[]{"id", "is_downloaded"}, null, null, null, null, null);
+            try {
+                while (c.moveToNext()) {
+                    String id = c.getString(0);
+                    if (!keep.contains(id) && c.getInt(1) != 1) {
+                        db.delete(TABLE, "id = ?", new String[]{id});
+                    }
+                }
+            } finally {
+                c.close();
+            }
+
             db.setTransactionSuccessful();
         } finally {
             db.endTransaction();

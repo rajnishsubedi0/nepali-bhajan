@@ -89,7 +89,9 @@ public class PlaybackManager {
     private final Runnable progressRunnable = new Runnable() {
         @Override
         public void run() {
-            if (controller != null) {
+            // Only keep ticking while a screen is actually listening; otherwise the
+            // main thread would wake up every second for nothing during background playback.
+            if (controller != null && !listeners.isEmpty()) {
                 notifyProgress();
                 handler.postDelayed(this, 1000);
             }
@@ -126,7 +128,7 @@ public class PlaybackManager {
                 controller.setPlaybackSpeed(playbackSpeed);
 
                 flushPendingActions();
-                startProgressLoop();
+                if (!listeners.isEmpty()) startProgressLoop();
                 notifyModes();
                 notifyState();
             } catch (Exception e) {
@@ -179,13 +181,44 @@ public class PlaybackManager {
         if (!listeners.contains(listener)) {
             listeners.add(listener);
         }
-        notifyState();
-        notifyModes();
-        notifyTimer();
+
+        // notifyState() only fires when something changed since the last broadcast, so a
+        // screen that registers later (every tab switch creates a new Activity) would never
+        // learn what is already playing. Hand the current state straight to this listener.
+        if (controller != null) {
+            try {
+                boolean playing = controller.isPlaying();
+                MediaItem item = controller.getCurrentMediaItem();
+                String id = item != null ? item.mediaId : null;
+                String title = (item != null && item.mediaMetadata.title != null)
+                        ? item.mediaMetadata.title.toString() : null;
+                lastPlaying = playing;
+                lastMediaId = id;
+                lastTitle = title;
+                listener.onStateChanged(playing, title, id);
+                listener.onModesChanged(controller.getShuffleModeEnabled(), controller.getRepeatMode());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            startProgressLoop();
+        } else if (lastMediaId != null) {
+            listener.onStateChanged(lastPlaying, lastTitle, lastMediaId);
+        }
+        listener.onTimerChanged(getSleepTimerRemaining());
     }
 
     public void removeListener(Listener listener) {
         listeners.remove(listener);
+        if (listeners.isEmpty()) handler.removeCallbacks(progressRunnable);
+    }
+
+    public boolean isPlaying() {
+        if (controller == null) return lastPlaying;
+        try {
+            return controller.isPlaying();
+        } catch (Exception e) {
+            return lastPlaying;
+        }
     }
 
     private void notifyState() {

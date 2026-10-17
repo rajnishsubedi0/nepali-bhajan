@@ -20,6 +20,8 @@ import java.util.List;
 public class ImageSharer {
     public static void shareBhajan(Context context, String title, List<String> lyrics) {
         try {
+            if (title == null) title = "";
+            if (lyrics == null) lyrics = new ArrayList<>();
             int width = 1080, pad = 72;
             boolean night = (context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_YES) != 0;
             int bg = night ? Color.parseColor("#0A0E15") : Color.parseColor("#F8FAFC");
@@ -59,6 +61,9 @@ public class ImageSharer {
             cv.drawText("Bhajan Sangraha • भजन संग्रह", pad, height - 52, fp);
 
             File dir = new File(context.getCacheDir(), "images"); dir.mkdirs();
+            // Every share used to leave a multi-MB PNG behind in the cache forever.
+            File[] old = dir.listFiles();
+            if (old != null) for (File f : old) f.delete();
             File file = new File(dir, "bhajan_" + System.currentTimeMillis() + ".png");
             FileOutputStream fos = new FileOutputStream(file);
             bmp.compress(Bitmap.CompressFormat.PNG, 100, fos); fos.close();

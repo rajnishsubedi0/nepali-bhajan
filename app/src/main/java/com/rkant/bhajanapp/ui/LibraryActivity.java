@@ -209,7 +209,18 @@ public class LibraryActivity extends AppCompatActivity {
             }
         });
 
-        if (savedInstanceState == null) applyIntent(getIntent());
+        if (savedInstanceState == null) {
+            applyIntent(getIntent());
+        } else {
+            // Rotation / theme change recreates the Activity: keep the tab, deity chip and
+            // opened category instead of silently dropping back to "All".
+            category = savedInstanceState.getString("state_category", "All");
+            tab = savedInstanceState.getInt("state_tab", TAB_ALL);
+            selectedCategory = savedInstanceState.getString("state_selected_category");
+            selectedSubCategory = savedInstanceState.getString("state_selected_sub");
+            showSubCategoryList = savedInstanceState.getBoolean("state_show_sub", false);
+            categoryAdapter.setSelected(category);
+        }
         styleSegments();
 
         BhajanRepo.load(this, list -> {
@@ -217,6 +228,16 @@ public class LibraryActivity extends AppCompatActivity {
             all = list;
             refresh();
         });
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString("state_category", category);
+        outState.putInt("state_tab", tab);
+        outState.putString("state_selected_category", selectedCategory);
+        outState.putString("state_selected_sub", selectedSubCategory);
+        outState.putBoolean("state_show_sub", showSubCategoryList);
     }
 
     @Override

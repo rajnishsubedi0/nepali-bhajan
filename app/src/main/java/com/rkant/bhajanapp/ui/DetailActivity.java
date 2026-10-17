@@ -131,7 +131,8 @@ public class DetailActivity extends AppCompatActivity {
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         int mins = Helper.getScreenTimeout(this);
         if (mins > 0) {
-            new Handler(Looper.getMainLooper()).postDelayed(() ->
+            // Posted on the Activity's own handler so it is cancelled in onDestroy().
+            handler.postDelayed(() ->
                     getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON), mins * 60000L);
         }
 
@@ -148,6 +149,12 @@ public class DetailActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         stopAutoScroll();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        handler.removeCallbacksAndMessages(null);
     }
 
     private void changeFont(int delta) {
@@ -206,6 +213,7 @@ public class DetailActivity extends AppCompatActivity {
                 runOnUiThread(() -> BhajanRepo.load(this, all -> {
                     if (isFinishing() || isDestroyed()) return;
                     Bhajan meta = BhajanRepo.find(all, bhajanId);
+                    if ((title == null || title.isEmpty()) && meta != null) title = meta.titleNepali;
                     lyricAdapter = new LyricAdapter(lyrics, this, title,
                             meta != null ? meta.type : null, meta != null ? meta.category : null);
                     rv.setAdapter(lyricAdapter);

@@ -742,7 +742,7 @@ public class AudioListActivity extends AppCompatActivity
         PlaybackManager pm = PlaybackManager.getInstance();
         String currentId = pm.getCurrentMediaId();
         if (currentId != null && !currentId.isEmpty() && miniPlayer.getVisibility() == View.GONE) {
-            updateMiniPlayer(true, "Bhajan Audio", currentId);
+            updateMiniPlayer(pm.isPlaying(), "Bhajan Audio", currentId);
         }
     }
 
