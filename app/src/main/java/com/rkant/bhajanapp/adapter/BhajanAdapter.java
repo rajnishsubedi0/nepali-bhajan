@@ -19,15 +19,15 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.rkant.bhajanapp.R;
 import com.rkant.bhajanapp.model.Bhajan;
 import com.rkant.bhajanapp.ui.DetailActivity;
-import com.rkant.bhajanapp.utils.BhajanCategories;
 import com.rkant.bhajanapp.utils.Helper;
 
 import java.util.List;
 
 public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
 
-    public interface OnFavChanged { void onChanged(boolean nowFavourite); }
-    public interface OnArchiveChanged { void onArchived(String bhajanId); }
+    // Position-aware callbacks so the Activity can animate removals
+    public interface OnFavChanged { void onChanged(Bhajan b, int position, boolean nowFavourite); }
+    public interface OnArchiveChanged { void onArchived(Bhajan b, int position); }
     public interface OnBhajanOptions { void onOptions(Bhajan bhajan, int position); }
 
     private List<Bhajan> list;
@@ -37,12 +37,6 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
     private OnBhajanOptions optionsListener;
     private boolean swipeArchiveEnabled = true;
     private final Handler swipeHandler = new Handler(Looper.getMainLooper());
-
-    // Deity dot drawables
-    private static final int[] DOT_DRAWABLES = {
-            R.drawable.dot_krishna, R.drawable.dot_shiva, R.drawable.dot_hari,
-            R.drawable.dot_ram, R.drawable.dot_other
-    };
 
     public BhajanAdapter(List<Bhajan> list, Context ctx) {
         this.list = list;
@@ -58,6 +52,22 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
     public void setOnArchiveChanged(OnArchiveChanged l) { this.archiveListener = l; }
     public void setOnBhajanOptions(OnBhajanOptions l) { this.optionsListener = l; }
     public void setSwipeArchiveEnabled(boolean e) { this.swipeArchiveEnabled = e; }
+
+    /** Removes one row with the built-in RecyclerView removal animation. */
+    public void removeItemAt(int position) {
+        if (list == null || position < 0 || position >= list.size()) return;
+        list.remove(position);
+        notifyItemRemoved(position);
+    }
+
+    /** Finds the current adapter position of a bhajan (by id). */
+    public int positionOf(Bhajan b) {
+        if (b == null || b.id == null || list == null) return -1;
+        for (int i = 0; i < list.size(); i++) {
+            if (b.id.equals(list.get(i).id)) return i;
+        }
+        return -1;
+    }
 
     @NonNull
     @Override
@@ -75,22 +85,13 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
         h.number.setTextSize(Helper.listNumberSize(ctx));
         h.title.setText(b.titleNepali);
         h.title.setTextSize(Helper.listTitleSize(ctx));
-
-        // Slim sub-row: dot + type text
-        int dotIndex = BhajanCategories.indexOf(b.category);
-        h.deityDot.setBackgroundResource(DOT_DRAWABLES[dotIndex]);
-
-        if (b.type != null && !b.type.isEmpty()) {
-            h.sub.setText(b.type);
-            h.sub.setVisibility(View.VISIBLE);
-        } else {
-            h.sub.setVisibility(View.GONE);
-        }
-
+        h.sub.setText(b.type);
+        h.sub.setVisibility(b.type == null || b.type.isEmpty() ? View.GONE : View.VISIBLE);
         bindHeart(h.fav, fav);
         h.row.setBackgroundResource(archived ? R.drawable.bg_card_archived : R.drawable.bg_card);
 
         h.cardContainer.setTranslationX(0);
+        h.cardContainer.setAlpha(1f);
         h.archiveReveal.setVisibility(View.GONE);
         cancelPendingLongPress(h.row);
 
@@ -177,9 +178,7 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
                     if (swiping[0]) {
                         float shift = Math.max(-revealWidth, Math.min(revealWidth, dx));
                         h.cardContainer.setTranslationX(shift);
-                        if (Math.abs(shift) > 24 * density) {
-                            h.archiveReveal.setVisibility(View.VISIBLE);
-                        }
+                        if (Math.abs(shift) > 24 * density) h.archiveReveal.setVisibility(View.VISIBLE);
                         return true;
                     }
                     return false;
@@ -209,15 +208,44 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
         });
     }
 
+    /**
+     * Swipe-to-archive with a smooth exit. If archived items stay visible in the
+     * list (setting on), we just restyle via refresh; otherwise the card slides
+     * off-screen and the row is removed with the RecyclerView removal animation.
+     */
     private void doArchive(Bhajan b, VH h) {
-        Helper.toggleArchive(ctx, b.id);
-        Toast.makeText(ctx, "Bhajan archived", Toast.LENGTH_SHORT).show();
-        if (archiveListener != null) {
-            archiveListener.onArchived(b.id);
+        final int position = h.getAdapterPosition();
+        final boolean keepInList = Helper.isArchivedInListEnabled(ctx);
+
+        if (keepInList) {
+            Helper.toggleArchive(ctx, b.id);
+            Toast.makeText(ctx, "Bhajan archived", Toast.LENGTH_SHORT).show();
+            if (archiveListener != null) archiveListener.onArchived(b, position);
+            return;
         }
+
+        float direction = h.cardContainer.getTranslationX() >= 0 ? 1f : -1f;
+        h.archiveReveal.setVisibility(View.GONE);
+        h.cardContainer.animate()
+                .translationX(direction * h.cardContainer.getWidth())
+                .alpha(0f)
+                .setDuration(250)
+                .withEndAction(() -> {
+                    Helper.toggleArchive(ctx, b.id);
+                    int p = position;
+                    if (p == RecyclerView.NO_POSITION) p = positionOf(b);
+                    if (p >= 0 && p < list.size()) {
+                        list.remove(p);
+                        notifyItemRemoved(p);
+                    }
+                    Toast.makeText(ctx, "Bhajan archived", Toast.LENGTH_SHORT).show();
+                    if (archiveListener != null) archiveListener.onArchived(b, p);
+                })
+                .start();
     }
 
     private void toggleFav(Bhajan b, VH h) {
+        final int position = h.getAdapterPosition();
         boolean currentlyFav = Helper.isFav(ctx, b.id);
         if (currentlyFav) {
             Helper.showConfirm(ctx, "Remove from Favourites",
@@ -225,22 +253,14 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
                     "Remove", true, () -> {
                         Helper.toggleFav(ctx, b.id);
                         Toast.makeText(ctx, "Removed from favourites", Toast.LENGTH_SHORT).show();
-                        if (favListener != null) {
-                            favListener.onChanged(false);
-                        } else {
-                            int p = h.getAdapterPosition();
-                            if (p != RecyclerView.NO_POSITION) notifyItemChanged(p);
-                        }
+                        if (favListener != null) favListener.onChanged(b, position, false);
+                        else if (position != RecyclerView.NO_POSITION) notifyItemChanged(position);
                     });
         } else {
             Helper.toggleFav(ctx, b.id);
             Toast.makeText(ctx, "Added to favourites", Toast.LENGTH_SHORT).show();
-            if (favListener != null) {
-                favListener.onChanged(true);
-            } else {
-                int p = h.getAdapterPosition();
-                if (p != RecyclerView.NO_POSITION) notifyItemChanged(p);
-            }
+            if (favListener != null) favListener.onChanged(b, position, true);
+            else if (position != RecyclerView.NO_POSITION) notifyItemChanged(position);
         }
     }
 
@@ -255,7 +275,7 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
     static class VH extends RecyclerView.ViewHolder {
         TextView number, title, sub, tvArchiveAction;
         ImageView fav;
-        View row, cardContainer, archiveReveal, deityDot;
+        View row, cardContainer, archiveReveal;
 
         VH(View v) {
             super(v);
@@ -266,7 +286,6 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
             number = v.findViewById(R.id.tv_number);
             title = v.findViewById(R.id.tv_title);
             sub = v.findViewById(R.id.tv_sub);
-            deityDot = v.findViewById(R.id.deity_dot);
             fav = v.findViewById(R.id.iv_fav);
         }
     }

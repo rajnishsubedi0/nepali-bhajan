@@ -159,12 +159,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupExpandedAdapters() {
-        // Recent: swipe removes from recent history (NO heart icon)
+        // Recent: swipe removes from recent history (adapter animates the row away)
         recentExpandAdapter = new HomeExpandAdapter(expandedRecent, this, false,
                 (b, pos) -> {
                     Helper.removeRecent(this, b.id);
-                    if (expandedRecent.size() <= 1) recentExpanded = false;
-                    bindContent();
+                    rebuildRecentHorizontal();
+                    if (expandedRecent.isEmpty()) {
+                        recentExpanded = false;
+                        sectionRecent.setVisibility(View.GONE);
+                    }
                     Toast.makeText(this, "Removed from recent", Toast.LENGTH_SHORT).show();
                 },
                 this::openBhajan);
@@ -172,12 +175,14 @@ public class MainActivity extends AppCompatActivity {
         rvRecentExpanded.setNestedScrollingEnabled(false);
         rvRecentExpanded.setAdapter(recentExpandAdapter);
 
-        // Favourites: swipe removes from favourites (NO heart icon — removed per request)
+        // Favourites: swipe removes from favourites (adapter animates the row away)
         favExpandAdapter = new HomeExpandAdapter(expandedFav, this, false,
                 (b, pos) -> {
                     Helper.toggleFav(this, b.id);
-                    if (expandedFav.size() <= 1) favExpanded = false;
-                    bindContent();
+                    rebuildFavHorizontal();
+                    if (expandedFav.isEmpty()) {
+                        favExpanded = false;
+                    }
                     Toast.makeText(this, "Removed from favourites", Toast.LENGTH_SHORT).show();
                 },
                 this::openBhajan);
@@ -185,7 +190,6 @@ public class MainActivity extends AppCompatActivity {
         rvFavExpanded.setNestedScrollingEnabled(false);
         rvFavExpanded.setAdapter(favExpandAdapter);
     }
-
     // ═══════════════════════════════════════════════════════════
     // SMOOTH EXPAND / COLLAPSE ANIMATIONS
     // ═══════════════════════════════════════════════════════════
@@ -489,6 +493,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         // Collapse expanded sections first
+
         if (deityExpanded || recentExpanded || favExpanded) {
             deityExpanded = false;
             recentExpanded = false;
@@ -505,5 +510,22 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Press back again to exit", Toast.LENGTH_SHORT).show();
             backHandler.postDelayed(() -> backOnce = false, 2000);
         }
+    }
+    /** Rebuilds the collapsed horizontal recent strip from the current expanded list. */
+    private void rebuildRecentHorizontal() {
+        recentContainer.removeAllViews();
+        for (int i = 0; i < Math.min(expandedRecent.size(), MAX_HORIZONTAL_CARDS); i++) {
+            recentContainer.addView(makeCard(expandedRecent.get(i), recentContainer));
+        }
+    }
+
+    /** Rebuilds the collapsed horizontal favourites strip from the current expanded list. */
+    private void rebuildFavHorizontal() {
+        favContainer.removeAllViews();
+        for (int i = 0; i < Math.min(expandedFav.size(), MAX_HORIZONTAL_CARDS); i++) {
+            favContainer.addView(makeCard(expandedFav.get(i), favContainer));
+        }
+        scrollFav.setVisibility(expandedFav.isEmpty() ? View.GONE : View.VISIBLE);
+        favEmpty.setVisibility(expandedFav.isEmpty() ? View.VISIBLE : View.GONE);
     }
 }

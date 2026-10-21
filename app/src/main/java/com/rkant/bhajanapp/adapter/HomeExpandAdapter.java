@@ -17,7 +17,11 @@ import com.rkant.bhajanapp.utils.BhajanCategories;
 
 import java.util.List;
 
-
+/**
+ * Vertical bhajan rows for the expanded Home sections.
+ * Swipe left/right reveals a "Remove" action; tapping it slides the card
+ * away and removes the row with a smooth RecyclerView animation.
+ */
 public class HomeExpandAdapter extends RecyclerView.Adapter<HomeExpandAdapter.VH> {
 
     public interface OnRemove { void onRemove(Bhajan b, int position); }
@@ -63,10 +67,11 @@ public class HomeExpandAdapter extends RecyclerView.Adapter<HomeExpandAdapter.VH
         h.sub.setText(sub.toString());
         h.sub.setVisibility(sub.length() > 0 ? View.VISIBLE : View.GONE);
 
-        // Heart is always hidden now
+        // Heart is always hidden on Home expanded rows
         h.fav.setVisibility(View.GONE);
 
         h.cardContainer.setTranslationX(0);
+        h.cardContainer.setAlpha(1f);
         h.reveal.setVisibility(View.GONE);
 
         h.row.setOnClickListener(v -> {
@@ -118,12 +123,7 @@ public class HomeExpandAdapter extends RecyclerView.Adapter<HomeExpandAdapter.VH
                             float holdX = upDx > 0 ? revealWidth : -revealWidth;
                             h.cardContainer.animate().translationX(holdX).setDuration(120).start();
                             h.reveal.setVisibility(View.VISIBLE);
-                            h.reveal.setOnClickListener(rv -> {
-                                int p = h.getAdapterPosition();
-                                if (p != RecyclerView.NO_POSITION && removeListener != null) {
-                                    removeListener.onRemove(list.get(p), p);
-                                }
-                            });
+                            h.reveal.setOnClickListener(rv -> animateRemoval(h, b));
                         } else {
                             h.cardContainer.animate().translationX(0).setDuration(120).start();
                             h.reveal.setVisibility(View.GONE);
@@ -136,6 +136,29 @@ public class HomeExpandAdapter extends RecyclerView.Adapter<HomeExpandAdapter.VH
             }
             return false;
         });
+    }
+
+    /** Slides the card off-screen, then removes the row with animation. */
+    private void animateRemoval(VH h, Bhajan b) {
+        final int position = h.getAdapterPosition();
+        if (position == RecyclerView.NO_POSITION) return;
+        float direction = h.cardContainer.getTranslationX() >= 0 ? 1f : -1f;
+        h.reveal.setVisibility(View.GONE);
+        h.cardContainer.animate()
+                .translationX(direction * h.cardContainer.getWidth())
+                .alpha(0f)
+                .setDuration(250)
+                .withEndAction(() -> {
+                    // Remove from the (shared) list first, with the removal animation,
+                    // then notify the Activity so it can update Helper + the horizontal strip.
+                    int idx = list.indexOf(b);
+                    if (idx >= 0) {
+                        list.remove(idx);
+                        notifyItemRemoved(idx);
+                    }
+                    if (removeListener != null) removeListener.onRemove(b, position);
+                })
+                .start();
     }
 
     @Override
