@@ -11,9 +11,10 @@
         android:padding="24dp">
 
         <TextView
+            android:id="@+id/tv_dialog_title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Category Name"
+            android:text="New Collection"
             android:textColor="@color/text_primary"
             android:textSize="18sp"
             android:textStyle="bold" />
@@ -24,7 +25,7 @@
             android:layout_height="48dp"
             android:layout_marginTop="16dp"
             android:background="@drawable/bg_pill"
-            android:hint="My Category"
+            android:hint="My Collection"
             android:imeOptions="actionDone"
             android:inputType="text"
             android:maxLines="1"

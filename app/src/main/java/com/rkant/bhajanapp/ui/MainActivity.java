@@ -28,11 +28,9 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.Random;
 
-/**
- * Home dashboard: bhajan of the day, deity shortcuts, continue reading,
- * favourites and a now-playing strip.
- */
+
 public class MainActivity extends AppCompatActivity {
+
 
     private static final int MAX_HORIZONTAL_CARDS = 10;
 
@@ -105,7 +103,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.see_all_library).setOnClickListener(v ->
                 startActivity(LibraryActivity.intent(this, "All", LibraryActivity.TAB_ALL, false)));
         findViewById(R.id.see_all_recent).setOnClickListener(v ->
-                startActivity(LibraryActivity.intent(this, "All", LibraryActivity.TAB_RECENT, false)));
+                startActivity(LibraryActivity.intent(this, "All", LibraryActivity.TAB_ALL, false)));
         findViewById(R.id.see_all_fav).setOnClickListener(v ->
                 startActivity(LibraryActivity.intent(this, "All", LibraryActivity.TAB_FAV, false)));
 

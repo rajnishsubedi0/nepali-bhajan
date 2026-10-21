@@ -39,7 +39,7 @@
         android:layout_marginTop="16dp"
         android:background="@drawable/bg_button_accent"
         android:gravity="center"
-        android:text="Add to Category"
+        android:text="Add to Collection"
         android:textColor="@color/on_accent"
         android:textSize="16sp"
         android:textStyle="bold" />
@@ -51,7 +51,7 @@
         android:layout_marginTop="10dp"
         android:background="@drawable/bg_pill"
         android:gravity="center"
-        android:text="Add to Favourite Category"
+        android:text="Add to Favourites"
         android:textColor="@color/text_primary"
         android:textSize="15sp"
         android:textStyle="bold" />
@@ -63,7 +63,7 @@
         android:layout_marginTop="10dp"
         android:background="@drawable/bg_pill"
         android:gravity="center"
-        android:text="Add to Archive Category"
+        android:text="Archive"
         android:textColor="@color/text_primary"
         android:textSize="15sp"
         android:textStyle="bold" />
@@ -82,13 +82,13 @@
         android:visibility="gone" />
 
     <TextView
-        android:id="@+id/sheet_remove_category"
+        android:id="@+id/sheet_remove_collection"
         android:layout_width="match_parent"
         android:layout_height="50dp"
         android:layout_marginTop="10dp"
         android:background="@drawable/bg_pill"
         android:gravity="center"
-        android:text="Remove from this Category"
+        android:text="Remove from this Collection"
         android:textColor="@color/red"
         android:textSize="15sp"
         android:textStyle="bold"

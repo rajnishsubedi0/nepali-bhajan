@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.rkant.bhajanapp.R;
 import com.rkant.bhajanapp.model.Bhajan;
 import com.rkant.bhajanapp.ui.DetailActivity;
+import com.rkant.bhajanapp.utils.BhajanCategories;
 import com.rkant.bhajanapp.utils.Helper;
 
 import java.util.List;
@@ -36,6 +37,12 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
     private OnBhajanOptions optionsListener;
     private boolean swipeArchiveEnabled = true;
     private final Handler swipeHandler = new Handler(Looper.getMainLooper());
+
+    // Deity dot drawables
+    private static final int[] DOT_DRAWABLES = {
+            R.drawable.dot_krishna, R.drawable.dot_shiva, R.drawable.dot_hari,
+            R.drawable.dot_ram, R.drawable.dot_other
+    };
 
     public BhajanAdapter(List<Bhajan> list, Context ctx) {
         this.list = list;
@@ -68,13 +75,21 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
         h.number.setTextSize(Helper.listNumberSize(ctx));
         h.title.setText(b.titleNepali);
         h.title.setTextSize(Helper.listTitleSize(ctx));
-        h.sub.setText(b.type);
-        h.sub.setVisibility(b.type == null || b.type.isEmpty() ? View.GONE : View.VISIBLE);
-        bindHeart(h.fav, fav);
 
+        // Slim sub-row: dot + type text
+        int dotIndex = BhajanCategories.indexOf(b.category);
+        h.deityDot.setBackgroundResource(DOT_DRAWABLES[dotIndex]);
+
+        if (b.type != null && !b.type.isEmpty()) {
+            h.sub.setText(b.type);
+            h.sub.setVisibility(View.VISIBLE);
+        } else {
+            h.sub.setVisibility(View.GONE);
+        }
+
+        bindHeart(h.fav, fav);
         h.row.setBackgroundResource(archived ? R.drawable.bg_card_archived : R.drawable.bg_card);
 
-        // Reset swipe state + any stale long-press timer from a recycled row
         h.cardContainer.setTranslationX(0);
         h.archiveReveal.setVisibility(View.GONE);
         cancelPendingLongPress(h.row);
@@ -94,8 +109,6 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
         h.fav.setOnClickListener(v -> toggleFav(b, h));
 
         if (swipeArchiveEnabled && !archived) {
-            // Long press is handled inside the swipe gesture itself,
-            // so the options sheet can NEVER race with a swipe.
             h.row.setOnLongClickListener(null);
             setupSwipe(h, b);
         } else {
@@ -111,7 +124,6 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
         }
     }
 
-    /** Removes a pending long-press callback that a previous gesture left on this row. */
     private void cancelPendingLongPress(View row) {
         Object tag = row.getTag();
         if (tag instanceof Runnable) {
@@ -123,18 +135,17 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
     private void setupSwipe(VH h, Bhajan b) {
         final float density = ctx.getResources().getDisplayMetrics().density;
         final float revealWidth = 90 * density;
-        final float threshold = 150 * density;    // raised: was 120dp. Needs a decisive swipe.
-        final float startSlop = 26 * density;     // raised: was 22dp
+        final float threshold = 150 * density;
+        final float startSlop = 26 * density;
         final float[] startX = {0};
         final float[] startY = {0};
         final boolean[] swiping = {false};
         final boolean[] longPressFired = {false};
 
-        // Our own long-press timer: fully controlled by the swipe gesture.
         final Runnable longPress = new Runnable() {
             @Override
             public void run() {
-                if (swiping[0]) return; // swipe already started -> never fire
+                if (swiping[0]) return;
                 int p = h.getAdapterPosition();
                 if (p != RecyclerView.NO_POSITION && optionsListener != null) {
                     longPressFired[0] = true;
@@ -142,8 +153,8 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
                 }
             }
         };
-        h.row.setTag(longPress);
 
+        h.row.setTag(longPress);
         h.row.setOnTouchListener((v, event) -> {
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
@@ -153,13 +164,12 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
                     longPressFired[0] = false;
                     swipeHandler.removeCallbacks(longPress);
                     swipeHandler.postDelayed(longPress, ViewConfiguration.getLongPressTimeout());
-                    return false; // let click still work
+                    return false;
                 case MotionEvent.ACTION_MOVE:
                     float dx = event.getRawX() - startX[0];
                     float dy = event.getRawY() - startY[0];
                     if (!swiping[0] && Math.abs(dx) > startSlop && Math.abs(dx) > Math.abs(dy) * 2.2f) {
                         swiping[0] = true;
-                        // Swipe wins: kill the long-press for good.
                         swipeHandler.removeCallbacks(longPress);
                         v.setPressed(false);
                         v.getParent().requestDisallowInterceptTouchEvent(true);
@@ -193,14 +203,12 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
                         return true;
                     }
                     swiping[0] = false;
-                    // Block the click that would otherwise fire right after a long press
                     return longPressFired[0];
             }
             return false;
         });
     }
 
-    /** Swipe archives DIRECTLY into "All Archived" — no category question. */
     private void doArchive(Bhajan b, VH h) {
         Helper.toggleArchive(ctx, b.id);
         Toast.makeText(ctx, "Bhajan archived", Toast.LENGTH_SHORT).show();
@@ -212,7 +220,6 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
     private void toggleFav(Bhajan b, VH h) {
         boolean currentlyFav = Helper.isFav(ctx, b.id);
         if (currentlyFav) {
-            // Removing needs confirmation
             Helper.showConfirm(ctx, "Remove from Favourites",
                     "Remove \u201C" + b.titleNepali + "\u201D from your favourite list?",
                     "Remove", true, () -> {
@@ -226,7 +233,6 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
                         }
                     });
         } else {
-            // Heart button adds directly — no category question
             Helper.toggleFav(ctx, b.id);
             Toast.makeText(ctx, "Added to favourites", Toast.LENGTH_SHORT).show();
             if (favListener != null) {
@@ -249,7 +255,8 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
     static class VH extends RecyclerView.ViewHolder {
         TextView number, title, sub, tvArchiveAction;
         ImageView fav;
-        View row, cardContainer, archiveReveal;
+        View row, cardContainer, archiveReveal, deityDot;
+
         VH(View v) {
             super(v);
             row = v.findViewById(R.id.row);
@@ -259,6 +266,7 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
             number = v.findViewById(R.id.tv_number);
             title = v.findViewById(R.id.tv_title);
             sub = v.findViewById(R.id.tv_sub);
+            deityDot = v.findViewById(R.id.deity_dot);
             fav = v.findViewById(R.id.iv_fav);
         }
     }

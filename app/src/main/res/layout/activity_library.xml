@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root"
     android:layout_width="match_parent"
@@ -9,98 +8,123 @@
     android:focusableInTouchMode="true"
     android:orientation="vertical">
 
-    <LinearLayout
+    <!-- ══ COMPACT HEADER ══ -->
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
+        android:layout_height="56dp"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:paddingStart="20dp"
-        android:paddingEnd="20dp"
-        android:paddingTop="16dp">
+        android:paddingEnd="12dp">
 
         <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:id="@+id/title_group"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Library"
                 android:textColor="@color/text_primary"
-                android:textSize="28sp"
+                android:textSize="24sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/tv_count"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:text="0 bhajans"
+                android:layout_marginStart="10dp"
                 android:textColor="@color/text_secondary"
-                android:textSize="14sp" />
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/tv_active_view"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_tag"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:paddingTop="3dp"
+                android:paddingBottom="3dp"
+                android:text="All"
+                android:textColor="@color/accent"
+                android:textSize="11sp"
+                android:textStyle="bold" />
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/btn_clear_all"
-            android:layout_width="wrap_content"
-            android:layout_height="38dp"
-            android:background="@drawable/bg_pill"
-            android:gravity="center"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:text="Clear"
-            android:textColor="@color/red"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:visibility="gone" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="52dp"
-        android:layout_marginStart="20dp"
-        android:layout_marginEnd="20dp"
-        android:layout_marginTop="16dp"
-        android:background="@drawable/bg_search_bar"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingStart="16dp"
-        android:paddingEnd="8dp">
-
-        <ImageView
-            android:layout_width="22dp"
-            android:layout_height="22dp"
-            android:src="@drawable/ic_search"
-            android:tint="@color/text_secondary" />
-
-        <EditText
-            android:id="@+id/et_search"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:id="@+id/search_inline"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="@android:color/transparent"
-            android:hint="Search by title, deity or type"
-            android:imeOptions="actionSearch"
-            android:inputType="text"
-            android:maxLines="1"
-            android:paddingStart="12dp"
-            android:textColor="@color/text_primary"
-            android:textColorHint="@color/text_secondary"
-            android:textSize="16sp" />
+            android:layout_marginEnd="96dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:translationX="200dp"
+            android:visibility="invisible">
 
-        <ImageView
-            android:id="@+id/btn_search_clear"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:padding="8dp"
-            android:src="@drawable/ic_close"
-            android:tint="@color/text_secondary"
-            android:visibility="gone" />
-    </LinearLayout>
+            <EditText
+                android:id="@+id/et_search"
+                android:layout_width="0dp"
+                android:layout_height="42dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_search_bar"
+                android:hint="Search bhajans..."
+                android:imeOptions="actionSearch"
+                android:inputType="text"
+                android:maxLines="1"
+                android:paddingStart="14dp"
+                android:paddingEnd="8dp"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_secondary"
+                android:textSize="15sp" />
 
+            <ImageView
+                android:id="@+id/btn_search_clear"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Clear search"
+                android:padding="8dp"
+                android:src="@drawable/ic_close"
+                android:tint="@color/text_secondary"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_gravity="end"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:id="@+id/btn_search_toggle"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Search"
+                android:padding="10dp"
+                android:src="@drawable/ic_search"
+                android:tint="@color/text_primary" />
+
+            <ImageView
+                android:id="@+id/btn_overflow"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="More options"
+                android:padding="10dp"
+                android:src="@drawable/ic_more_vert"
+                android:tint="@color/text_primary" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- ══ DEITY FILTER CHIPS ══ -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_categories"
         android:layout_width="match_parent"
@@ -108,72 +132,77 @@
         android:clipToPadding="false"
         android:paddingStart="20dp"
         android:paddingEnd="20dp"
-        android:paddingTop="14dp"
-        android:paddingBottom="4dp" />
+        android:paddingTop="8dp"
+        android:paddingBottom="2dp" />
 
-    <!-- 5 segments -->
+    <!-- ══ SLEEK CONTINUE READING STRIP ══ -->
     <LinearLayout
+        android:id="@+id/recent_strip_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="20dp"
-        android:layout_marginEnd="20dp"
-        android:layout_marginTop="10dp"
-        android:layout_marginBottom="8dp"
-        android:background="@drawable/bg_segment"
-        android:orientation="horizontal"
-        android:padding="4dp">
+        android:orientation="vertical">
 
         <TextView
-            android:id="@+id/seg_all"
-            android:layout_width="0dp"
-            android:layout_height="40dp"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="All"
-            android:textSize="12sp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="20dp"
+            android:layout_marginTop="6dp"
+            android:text="Continue reading"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
             android:textStyle="bold" />
 
-        <TextView
-            android:id="@+id/seg_recent"
-            android:layout_width="0dp"
-            android:layout_height="40dp"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="Recent"
-            android:textSize="12sp"
-            android:textStyle="bold" />
+        <!-- Populated state -->
+        <HorizontalScrollView
+            android:id="@+id/recent_scroll"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipToPadding="false"
+            android:overScrollMode="never"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:scrollbars="none"
+            android:visibility="gone">
 
-        <TextView
-            android:id="@+id/seg_fav"
-            android:layout_width="0dp"
-            android:layout_height="40dp"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="Favourites"
-            android:textSize="12sp"
-            android:textStyle="bold" />
+            <LinearLayout
+                android:id="@+id/recent_strip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingTop="6dp"
+                android:paddingBottom="2dp" />
+        </HorizontalScrollView>
 
-        <TextView
-            android:id="@+id/seg_archived"
-            android:layout_width="0dp"
-            android:layout_height="40dp"
-            android:layout_weight="1"
+        <!-- Compact empty state -->
+        <LinearLayout
+            android:id="@+id/recent_empty"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginStart="20dp"
+            android:layout_marginEnd="20dp"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/bg_card"
             android:gravity="center"
-            android:text="Archived"
-            android:textSize="12sp"
-            android:textStyle="bold" />
+            android:orientation="horizontal"
+            android:visibility="gone">
 
-        <TextView
-            android:id="@+id/seg_category"
-            android:layout_width="0dp"
-            android:layout_height="40dp"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="Category"
-            android:textSize="12sp"
-            android:textStyle="bold" />
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_history"
+                android:tint="@color/text_secondary" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:text="No recent bhajans"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
+        </LinearLayout>
     </LinearLayout>
 
+    <!-- ══ MAIN CONTENT + FAB ══ -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -200,10 +229,10 @@
 
             <ImageView
                 android:id="@+id/iv_empty"
-                android:layout_width="88dp"
-                android:layout_height="88dp"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
                 android:background="@drawable/bg_circle_card"
-                android:padding="26dp"
+                android:padding="22dp"
                 android:src="@drawable/ic_search"
                 android:tint="@color/accent" />
 
@@ -211,9 +240,9 @@
                 android:id="@+id/tv_empty_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
+                android:layout_marginTop="14dp"
                 android:textColor="@color/text_primary"
-                android:textSize="18sp"
+                android:textSize="17sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -224,7 +253,39 @@
                 android:gravity="center"
                 android:textColor="@color/text_secondary"
                 android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/btn_empty_action"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_pill"
+                android:gravity="center"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:text="Browse all bhajans"
+                android:textColor="@color/accent"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
         </LinearLayout>
+
+        <!-- ══ FLOATING ADD BUTTON ══ -->
+        <ImageView
+            android:id="@+id/fab_add"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_gravity="bottom|end"
+            android:layout_marginEnd="20dp"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/bg_circle_accent"
+            android:contentDescription="Add new"
+            android:elevation="8dp"
+            android:foreground="?attr/selectableItemBackgroundBorderless"
+            android:padding="16dp"
+            android:src="@drawable/ic_add"
+            android:tint="@color/on_gradient"
+            android:visibility="gone" />
     </FrameLayout>
 
     <include layout="@layout/view_bottom_nav" />

@@ -4,9 +4,7 @@ import android.os.Bundle;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.appcompat.app.AppCompatActivity;
-
 import com.rkant.bhajanapp.BuildConfig;
 import com.rkant.bhajanapp.R;
 import com.rkant.bhajanapp.utils.BottomNav;
@@ -22,7 +20,6 @@ public class SettingsActivity extends AppCompatActivity {
     private TextView tvLibraryRecentValue, tvAudioRecentValue;
     private Switch switchArchivedSearch;
     private Switch switchArchivedInList;
-
     private final int[] timeoutValues = {1, 3, 5, 10, -1};
     private final int[] recentLimitOptions = {5, 10, 15, 20, 25, 30};
 
@@ -75,6 +72,7 @@ public class SettingsActivity extends AppCompatActivity {
         }
 
         findViewById(R.id.btn_battery).setOnClickListener(v -> BatteryHelper.showGuide(this));
+
         findViewById(R.id.btn_list_minus).setOnClickListener(v -> { listScale = clamp(listScale - 1); Helper.setListFontScale(this, listScale); update(); });
         findViewById(R.id.btn_list_plus).setOnClickListener(v -> { listScale = clamp(listScale + 1); Helper.setListFontScale(this, listScale); update(); });
         findViewById(R.id.btn_lyric_minus).setOnClickListener(v -> { lyricScale = clamp(lyricScale - 1); Helper.setLyricFontScale(this, lyricScale); update(); });
@@ -101,7 +99,6 @@ public class SettingsActivity extends AppCompatActivity {
             update();
         });
 
-        // Archive search switch
         switchArchivedSearch.setChecked(Helper.isArchivedSearchable(this));
         switchArchivedSearch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             Helper.setArchivedSearchable(this, isChecked);
@@ -109,7 +106,6 @@ public class SettingsActivity extends AppCompatActivity {
                     Toast.LENGTH_SHORT).show();
         });
 
-        // Archive-in-list switch (default OFF)
         switchArchivedInList.setChecked(Helper.isArchivedInListEnabled(this));
         switchArchivedInList.setOnCheckedChangeListener((buttonView, isChecked) -> {
             Helper.setArchivedInListEnabled(this, isChecked);
@@ -118,24 +114,6 @@ public class SettingsActivity extends AppCompatActivity {
                             : "Archived bhajans will be hidden from the list",
                     Toast.LENGTH_SHORT).show();
         });
-
-        findViewById(R.id.btn_clear_recent).setOnClickListener(v ->
-                Helper.showConfirm(this, "Clear reading history", "Remove all recently opened bhajans?", "Clear", true, () -> {
-                    Helper.clearRecents(this);
-                    Toast.makeText(this, "Reading history cleared", Toast.LENGTH_SHORT).show();
-                }));
-
-        findViewById(R.id.btn_clear_favs).setOnClickListener(v ->
-                Helper.showConfirm(this, "Clear favourites", "Remove all bhajans from your favourite list?", "Clear", true, () -> {
-                    Helper.clearFavs(this);
-                    Toast.makeText(this, "Favourites cleared", Toast.LENGTH_SHORT).show();
-                }));
-
-        findViewById(R.id.btn_clear_archived).setOnClickListener(v ->
-                Helper.showConfirm(this, "Unarchive all", "Restore all archived bhajans back to the main list?", "Restore", true, () -> {
-                    Helper.clearArchived(this);
-                    Toast.makeText(this, "All bhajans unarchived", Toast.LENGTH_SHORT).show();
-                }));
 
         update();
     }
