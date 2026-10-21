@@ -1,5 +1,4 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -9,7 +8,7 @@
     android:focusableInTouchMode="true"
     android:orientation="vertical">
 
-    <!-- ══ COMPACT HEADER ══ -->
+    <!-- ══ COMPACT HEADER: Title slides out, Search slides in ══ -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="56dp"
@@ -18,6 +17,7 @@
         android:paddingStart="20dp"
         android:paddingEnd="12dp">
 
+        <!-- Title group (slides left when search opens) -->
         <LinearLayout
             android:id="@+id/title_group"
             android:layout_width="wrap_content"
@@ -41,6 +41,7 @@
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp" />
 
+            <!-- Active view indicator (All / Favourites / Collections / Recent / Archived) -->
             <TextView
                 android:id="@+id/tv_active_view"
                 android:layout_width="wrap_content"
@@ -57,6 +58,7 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
+        <!-- Search bar (slides in from right, hidden initially) -->
         <LinearLayout
             android:id="@+id/search_inline"
             android:layout_width="match_parent"
@@ -96,6 +98,7 @@
                 android:visibility="gone" />
         </LinearLayout>
 
+        <!-- Right side icons -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
@@ -125,7 +128,7 @@
         </LinearLayout>
     </FrameLayout>
 
-    <!-- ══ DEITY FILTER CHIPS ══ -->
+    <!-- ══ DEITY FILTER CHIPS (shown only in All view) ══ -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_categories"
         android:layout_width="match_parent"
@@ -136,12 +139,13 @@
         android:paddingTop="8dp"
         android:paddingBottom="2dp" />
 
-    <!-- ══ SLEEK CONTINUE READING STRIP ══ -->
+    <!-- ══ CONTINUE READING STRIP (shown only in All view) ══ -->
     <LinearLayout
         android:id="@+id/recent_strip_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:visibility="gone">
 
         <TextView
             android:layout_width="wrap_content"
@@ -153,7 +157,7 @@
             android:textSize="14sp"
             android:textStyle="bold" />
 
-        <!-- Populated state -->
+        <!-- Populated state: horizontal scroll of recent cards -->
         <HorizontalScrollView
             android:id="@+id/recent_scroll"
             android:layout_width="match_parent"
@@ -174,7 +178,7 @@
                 android:paddingBottom="2dp" />
         </HorizontalScrollView>
 
-        <!-- Compact empty state -->
+        <!-- Empty state: shown when there are no recent bhajans -->
         <LinearLayout
             android:id="@+id/recent_empty"
             android:layout_width="match_parent"
@@ -209,7 +213,7 @@
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <!-- Wraps list + empty state so we can fade them together -->
+        <!-- Wraps list + empty state so we can fade them together on view changes -->
         <FrameLayout
             android:id="@+id/list_container"
             android:layout_width="match_parent"
@@ -241,7 +245,7 @@
                     android:background="@drawable/bg_circle_card"
                     android:padding="22dp"
                     android:src="@drawable/ic_search"
-                    app:tint="@color/accent" />
+                    android:tint="@color/accent" />
 
                 <TextView
                     android:id="@+id/tv_empty_title"
@@ -292,8 +296,9 @@
             android:foreground="?attr/selectableItemBackgroundBorderless"
             android:padding="16dp"
             android:src="@drawable/ic_add"
-            android:visibility="gone"
-            app:tint="@color/on_gradient" />
+            android:tint="@color/on_gradient"
+            android:visibility="gone" />
     </FrameLayout>
+
     <include layout="@layout/view_bottom_nav" />
 </LinearLayout>

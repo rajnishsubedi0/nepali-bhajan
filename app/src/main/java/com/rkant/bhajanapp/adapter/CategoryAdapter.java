@@ -33,11 +33,12 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.VH> {
         h.t.setTextColor(ctx.getColor(s ? R.color.on_accent : R.color.text_secondary));
         h.t.setOnClickListener(v -> {
             int pos = h.getAdapterPosition();
-            if (pos != RecyclerView.NO_POSITION && pos != sel) {
+            if (pos == RecyclerView.NO_POSITION) return;
+            if (pos != sel) {
                 int old = sel; sel = pos;
                 notifyItemChanged(old); notifyItemChanged(sel);
-                l.onClick(cats.get(sel));
             }
+            l.onClick(cats.get(pos));
         });
     }
     @Override public int getItemCount() { return cats.size(); }

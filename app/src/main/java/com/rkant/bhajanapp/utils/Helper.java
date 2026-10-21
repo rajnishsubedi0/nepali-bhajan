@@ -311,28 +311,6 @@ public class Helper {
                 .getStringSet("favs", new HashSet<>()));
     }
 
-    public static boolean isFav(Context ctx, String id) {
-        if (id == null) return false;
-        return getFavouriteSet(ctx).contains(id);
-    }
-
-    public static void toggleFav(Context ctx, String id) {
-        if (id == null) return;
-        Set<String> set = getFavouriteSet(ctx);
-        boolean removing = set.contains(id);
-        if (removing) set.remove(id);
-        else set.add(id);
-        ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit().putStringSet("favs", set).apply();
-        // Sync: removing a favourite also removes it from every favourite sub-category
-        if (removing) removeIdFromAllSubCategories(ctx, PREF_FAV_CATEGORIES, "fav_category_order", id);
-    }
-
-    public static int favCount(Context ctx) { return getFavouriteSet(ctx).size(); }
-
-    public static void clearFavs(Context ctx) {
-        ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit().remove("favs").apply();
-        clearAllSubCategoryContents(ctx, PREF_FAV_CATEGORIES);
-    }
 
     // ═══════════════════════════════════════════════════════════
     // BHAJAN RECENTS
@@ -599,14 +577,7 @@ public class Helper {
     private static final String PREF_FAV_CATEGORIES = "bhajan_fav_categories";
     private static final String PREF_ARCHIVE_CATEGORIES = "bhajan_archive_categories";
 
-    public static void ensureFav(Context ctx, String id) {
-        if (id == null) return;
-        Set<String> set = getFavouriteSet(ctx);
-        if (!set.contains(id)) {
-            set.add(id);
-            ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit().putStringSet("favs", set).apply();
-        }
-    }
+
 
     public static void ensureArchived(Context ctx, String id) {
         if (id == null) return;
@@ -747,5 +718,63 @@ public class Helper {
 
     public static void removeFromArchiveCategory(Context ctx, String name, String id) {
         removeFromSubCategory(ctx, PREF_ARCHIVE_CATEGORIES, "archive_category_order", name, id);
+    }
+    // ═══════════════════════════════════════════════════════════
+// BHAJAN FAVOURITES (ordered — most recently added first)
+// ═══════════════════════════════════════════════════════════
+    public static List<String> getFavIds(Context ctx) {
+        SharedPreferences prefs = ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE);
+        String stored = prefs.getString("fav_order", "");
+        if (stored == null || stored.isEmpty()) {
+            // One-time migration from the old unordered set
+            Set<String> oldSet = prefs.getStringSet("favs", null);
+            if (oldSet != null && !oldSet.isEmpty()) {
+                List<String> migrated = new ArrayList<>(oldSet);
+                prefs.edit().putString("fav_order", TextUtils.join(",", migrated))
+                        .remove("favs").apply();
+                return migrated;
+            }
+            return new ArrayList<>();
+        }
+        List<String> result = new ArrayList<>();
+        for (String id : stored.split(",")) if (!id.trim().isEmpty()) result.add(id.trim());
+        return result;
+    }
+
+    private static void saveFavIds(Context ctx, List<String> ids) {
+        ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit()
+                .putString("fav_order", TextUtils.join(",", ids)).apply();
+    }
+
+    public static boolean isFav(Context ctx, String id) {
+        if (id == null) return false;
+        return getFavIds(ctx).contains(id);
+    }
+
+    public static void toggleFav(Context ctx, String id) {
+        if (id == null) return;
+        List<String> favs = new ArrayList<>(getFavIds(ctx));
+        boolean removing = favs.contains(id);
+        if (removing) favs.remove(id);
+        else favs.add(0, id);                 // newest favourite goes to the front
+        saveFavIds(ctx, favs);
+        if (removing) removeIdFromAllSubCategories(ctx, PREF_FAV_CATEGORIES, "fav_category_order", id);
+    }
+
+    public static int favCount(Context ctx) { return getFavIds(ctx).size(); }
+
+    public static void clearFavs(Context ctx) {
+        ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit()
+                .remove("fav_order").remove("favs").apply();
+        clearAllSubCategoryContents(ctx, PREF_FAV_CATEGORIES);
+    }
+
+    public static void ensureFav(Context ctx, String id) {
+        if (id == null) return;
+        List<String> favs = new ArrayList<>(getFavIds(ctx));
+        if (!favs.contains(id)) {
+            favs.add(0, id);
+            saveFavIds(ctx, favs);
+        }
     }
 }

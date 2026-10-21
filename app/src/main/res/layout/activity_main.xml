@@ -19,7 +19,7 @@
             android:orientation="vertical"
             android:paddingBottom="28dp">
 
-            <!-- Greeting header -->
+            <!-- ═══ GREETING HEADER ═══ -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -73,7 +73,7 @@
                     android:tint="@color/accent" />
             </LinearLayout>
 
-            <!-- Search entry -->
+            <!-- ═══ SEARCH ENTRY ═══ -->
             <LinearLayout
                 android:id="@+id/search_box"
                 android:layout_width="match_parent"
@@ -103,7 +103,7 @@
                     android:textSize="16sp" />
             </LinearLayout>
 
-            <!-- Bhajan of the day -->
+            <!-- ═══ BHAJAN OF THE DAY ═══ -->
             <FrameLayout
                 android:id="@+id/card_daily"
                 android:layout_width="match_parent"
@@ -197,7 +197,7 @@
                 </LinearLayout>
             </FrameLayout>
 
-            <!-- Now playing -->
+            <!-- ═══ NOW PLAYING ═══ -->
             <LinearLayout
                 android:id="@+id/card_now_playing"
                 android:layout_width="match_parent"
@@ -261,7 +261,7 @@
                     android:tint="@color/on_gradient" />
             </LinearLayout>
 
-            <!-- ══ BROWSE BY DEITY (expandable) ══ -->
+            <!-- ═══ BROWSE BY DEITY ═══ -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -291,6 +291,7 @@
                     android:textStyle="bold" />
             </LinearLayout>
 
+            <!-- Collapsed: horizontal deity tiles -->
             <HorizontalScrollView
                 android:id="@+id/hs_deity"
                 android:layout_width="match_parent"
@@ -309,7 +310,7 @@
                     android:orientation="horizontal" />
             </HorizontalScrollView>
 
-            <!-- Expanded deity list (vertical) -->
+            <!-- Expanded: vertical deity rows -->
             <LinearLayout
                 android:id="@+id/deity_expanded_container"
                 android:layout_width="match_parent"
@@ -320,7 +321,7 @@
                 android:orientation="vertical"
                 android:visibility="gone" />
 
-            <!-- ══ CONTINUE READING (expandable + swipe-to-remove) ══ -->
+            <!-- ═══ CONTINUE READING ═══ -->
             <LinearLayout
                 android:id="@+id/section_recent"
                 android:layout_width="match_parent"
@@ -357,6 +358,7 @@
                         android:textStyle="bold" />
                 </LinearLayout>
 
+                <!-- Collapsed: horizontal cards -->
                 <HorizontalScrollView
                     android:id="@+id/hs_recent"
                     android:layout_width="match_parent"
@@ -375,7 +377,7 @@
                         android:orientation="horizontal" />
                 </HorizontalScrollView>
 
-                <!-- Expanded recent list (vertical, swipe to remove) -->
+                <!-- Expanded: vertical list with swipe-to-remove -->
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rv_recent_expanded"
                     android:layout_width="match_parent"
@@ -387,7 +389,7 @@
                     android:visibility="gone" />
             </LinearLayout>
 
-            <!-- ══ YOUR FAVOURITES (expandable + swipe-to-remove) ══ -->
+            <!-- ═══ YOUR FAVOURITES ═══ -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -417,6 +419,7 @@
                     android:textStyle="bold" />
             </LinearLayout>
 
+            <!-- Collapsed: horizontal cards -->
             <HorizontalScrollView
                 android:id="@+id/scroll_fav"
                 android:layout_width="match_parent"
@@ -435,7 +438,7 @@
                     android:orientation="horizontal" />
             </HorizontalScrollView>
 
-            <!-- Expanded favourites list (vertical, swipe to remove) -->
+            <!-- Expanded: vertical list with swipe-to-remove -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rv_fav_expanded"
                 android:layout_width="match_parent"
@@ -446,6 +449,7 @@
                 android:overScrollMode="never"
                 android:visibility="gone" />
 
+            <!-- Empty state -->
             <LinearLayout
                 android:id="@+id/fav_empty"
                 android:layout_width="match_parent"
@@ -478,7 +482,25 @@
                     android:textSize="14sp" />
             </LinearLayout>
 
-            <!-- Audio shortcut -->
+            <!-- See more → full Favourites tab -->
+            <TextView
+                android:id="@+id/btn_see_more_fav"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_pill"
+                android:foreground="?attr/selectableItemBackground"
+                android:gravity="center"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp"
+                android:text="See more"
+                android:textColor="@color/accent"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <!-- ═══ AUDIO SHORTCUT ═══ -->
             <LinearLayout
                 android:id="@+id/card_audio"
                 android:layout_width="match_parent"

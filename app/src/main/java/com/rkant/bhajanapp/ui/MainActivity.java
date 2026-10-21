@@ -46,6 +46,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean backOnce = false;
     private long lastBack = 0;
     private final Handler backHandler = new Handler(Looper.getMainLooper());
+    private TextView btnSeeMoreFav;
 
     private View cardDaily, cardNowPlaying, sectionRecent, favEmpty;
     private View hsDeity, hsRecent, scrollFav;
@@ -127,6 +128,7 @@ public class MainActivity extends AppCompatActivity {
         deityExpandedContainer = findViewById(R.id.deity_expanded_container);
         rvRecentExpanded = findViewById(R.id.rv_recent_expanded);
         rvFavExpanded = findViewById(R.id.rv_fav_expanded);
+        btnSeeMoreFav = findViewById(R.id.btn_see_more_fav);
 
         ((TextView) findViewById(R.id.tv_greeting)).setText(greeting());
 
@@ -156,6 +158,10 @@ public class MainActivity extends AppCompatActivity {
             all = list;
             bindContent();
         });
+        btnSeeMoreFav.setOnClickListener(v -> {
+            startActivity(LibraryActivity.intent(this, "All", LibraryActivity.TAB_FAV, false));
+            overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+        });
     }
 
     private void setupExpandedAdapters() {
@@ -180,9 +186,9 @@ public class MainActivity extends AppCompatActivity {
                 (b, pos) -> {
                     Helper.toggleFav(this, b.id);
                     rebuildFavHorizontal();
-                    if (expandedFav.isEmpty()) {
-                        favExpanded = false;
-                    }
+                    btnSeeMoreFav.setVisibility(
+                            Helper.favCount(this) > MAX_HORIZONTAL_CARDS ? View.VISIBLE : View.GONE);
+                    if (expandedFav.isEmpty()) favExpanded = false;
                     Toast.makeText(this, "Removed from favourites", Toast.LENGTH_SHORT).show();
                 },
                 this::openBhajan);
@@ -423,20 +429,30 @@ public class MainActivity extends AppCompatActivity {
         favContainer.removeAllViews();
         expandedFav.clear();
 
-        List<Bhajan> favList = new ArrayList<>();
-        for (Bhajan b : all) if (Helper.isFav(this, b.id)) favList.add(b);
-
-        for (int i = 0; i < Math.min(favList.size(), MAX_HORIZONTAL_CARDS); i++) {
-            favContainer.addView(makeCard(favList.get(i), favContainer));
+        // 10 most recently added favourites
+        List<String> favIds = Helper.getFavIds(this);
+        List<Bhajan> preview = new ArrayList<>();
+        for (String id : favIds) {
+            if (preview.size() >= MAX_HORIZONTAL_CARDS) break;   // MAX_HORIZONTAL_CARDS = 10
+            Bhajan b = BhajanRepo.find(all, id);
+            if (b != null) preview.add(b);
         }
 
-        expandedFav.addAll(favList);
+        // Horizontal (collapsed)
+        for (Bhajan b : preview) {
+            favContainer.addView(makeCard(b, favContainer));
+        }
+
+        // Vertical (expanded) — same 10, keeps swipe-to-remove
+        expandedFav.addAll(preview);
         favExpandAdapter.update(expandedFav);
 
-        scrollFav.setVisibility(favList.isEmpty() ? View.GONE : View.VISIBLE);
-        favEmpty.setVisibility(favList.isEmpty() ? View.VISIBLE : View.GONE);
-    }
+        scrollFav.setVisibility(preview.isEmpty() ? View.GONE : View.VISIBLE);
+        favEmpty.setVisibility(preview.isEmpty() ? View.VISIBLE : View.GONE);
 
+        // "See more" only when there are more favourites than the preview shows
+        btnSeeMoreFav.setVisibility(favIds.size() > MAX_HORIZONTAL_CARDS ? View.VISIBLE : View.GONE);
+    }
     private View makeCard(Bhajan b, LinearLayout parent) {
         View card = LayoutInflater.from(this).inflate(R.layout.item_home_card, parent, false);
         TextView tag = card.findViewById(R.id.tv_card_tag);
@@ -519,13 +535,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /** Rebuilds the collapsed horizontal favourites strip from the current expanded list. */
+ 
     private void rebuildFavHorizontal() {
         favContainer.removeAllViews();
-        for (int i = 0; i < Math.min(expandedFav.size(), MAX_HORIZONTAL_CARDS); i++) {
-            favContainer.addView(makeCard(expandedFav.get(i), favContainer));
+        for (Bhajan b : expandedFav) {
+            favContainer.addView(makeCard(b, favContainer));
         }
-        scrollFav.setVisibility(expandedFav.isEmpty() ? View.GONE : View.VISIBLE);
-        favEmpty.setVisibility(expandedFav.isEmpty() ? View.VISIBLE : View.GONE);
     }
 }

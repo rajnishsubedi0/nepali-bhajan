@@ -13,11 +13,18 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
+import android.view.ViewGroup;
+import android.view.animation.AccelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.rkant.bhajanapp.R;
@@ -41,6 +48,9 @@ public class LibraryActivity extends AppCompatActivity {
     public static final String EXTRA_CATEGORY = "CATEGORY";
     public static final String EXTRA_TAB = "TAB";
     public static final String EXTRA_FOCUS_SEARCH = "FOCUS_SEARCH";
+    private View recentStripContainer, recentScroll, recentEmpty;
+    private LinearLayout recentStrip;
+    private ValueAnimator stripAnimator;
 
     public static final int TAB_ALL = 0;
     public static final int TAB_FAV = 1;
@@ -50,6 +60,9 @@ public class LibraryActivity extends AppCompatActivity {
     private static final int KIND_GENERAL = 0;
     private static final int KIND_FAV = 1;
     private static final int KIND_ARCHIVE = 2;
+
+    private ValueAnimator chipsAnimator;
+
 
     private final List<String> cats = Arrays.asList("All", "Krishna", "Shiva", "Hari", "Ram", "Others");
 
@@ -70,8 +83,7 @@ public class LibraryActivity extends AppCompatActivity {
     private View titleGroup, searchInline;
     private EditText etSearch;
     private TextView tvCount, tvEmptyTitle, tvEmptySub, btnEmptyAction, tvActiveView;
-    private View recentStripContainer, recentScroll, recentEmpty;
-    private LinearLayout recentStrip;
+
     private ImageView fabAdd;
 
     public static Intent intent(android.content.Context ctx, String category, int tab, boolean focusSearch) {
@@ -108,6 +120,10 @@ public class LibraryActivity extends AppCompatActivity {
         recentEmpty = findViewById(R.id.recent_empty);
         recentStrip = findViewById(R.id.recent_strip);
         fabAdd = findViewById(R.id.fab_add);
+        recentStripContainer = findViewById(R.id.recent_strip_container);
+        recentScroll = findViewById(R.id.recent_scroll);
+        recentEmpty = findViewById(R.id.recent_empty);
+        recentStrip = findViewById(R.id.recent_strip);
 
         root.requestFocus();
 
@@ -178,14 +194,13 @@ public class LibraryActivity extends AppCompatActivity {
 
         rvList.setLayoutManager(new LinearLayoutManager(this));
         rvList.setAdapter(adapter);
-
-        // Deity chips — switching them now fades the list
         rvCategories = findViewById(R.id.rv_categories);
         rvCategories.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         categoryAdapter = new CategoryAdapter(cats, this, c -> {
-            if (c.equals(category)) return;
+            boolean changed = !c.equals(category);
             category = c;
-            refreshAnimated();
+            if (changed) refresh();
+            scrollToTopSmooth();
         });
         rvCategories.setAdapter(categoryAdapter);
 
@@ -464,19 +479,25 @@ public class LibraryActivity extends AppCompatActivity {
         updateActiveViewLabel();
         updateFabVisibility();
 
-        // ── BUG FIX: deity chips only apply (and only show) in the All view ──
-        boolean showDeityChips = (tab == TAB_ALL && !showingArchived);
-        rvCategories.setVisibility(showDeityChips ? View.VISIBLE : View.GONE);
+        String q = etSearch.getText().toString().trim().toLowerCase();
+        boolean searching = !q.isEmpty();
 
-        // Collection list views (rendered by bhajanCategoryAdapter)
+        boolean chipsVisible = (tab == TAB_ALL && !showingArchived);
+        boolean stripVisible = (tab == TAB_ALL && !showingArchived && !searching);
+
+        if (stripVisible) populateRecentStripCards();
+        animateChips(chipsVisible);
+        animateStrip(stripVisible);
+
+
         if (tab == TAB_COLLECTIONS && selectedCollection == null) { showCollectionList(KIND_GENERAL); return; }
         if (tab == TAB_FAV && showSubCollectionList) { showCollectionList(KIND_FAV); return; }
         if (showingArchived && showSubCollectionList) { showCollectionList(KIND_ARCHIVE); return; }
 
+
+
         if (rvList.getAdapter() != adapter) rvList.setAdapter(adapter);
 
-        String q = etSearch.getText().toString().trim().toLowerCase();
-        boolean searching = !q.isEmpty();
         boolean includeArchived = Helper.isArchivedInListEnabled(this)
                 || (searching && Helper.isArchivedSearchable(this));
 
@@ -488,29 +509,24 @@ public class LibraryActivity extends AppCompatActivity {
             } else {
                 List<String> ids = Helper.getArchiveCategories(this).get(selectedSubCollection);
                 if (ids == null) { selectedSubCollection = null; showSubCollectionList = true; refresh(); return; }
-                for (String id : ids) {
-                    Bhajan b = BhajanRepo.find(all, id);
-                    if (b != null && Helper.isArchived(this, b.id)) base.add(b);
-                }
+                for (String id : ids) { Bhajan b = BhajanRepo.find(all, id); if (b != null && Helper.isArchived(this, b.id)) base.add(b); }
             }
         } else if (tab == TAB_FAV) {
             if (selectedSubCollection == null) {
-                for (Bhajan b : all) if (Helper.isFav(this, b.id)) base.add(b);
+                // Most recently added favourites first
+                for (String id : Helper.getFavIds(this)) {
+                    Bhajan b = BhajanRepo.find(all, id);
+                    if (b != null) base.add(b);
+                }
             } else {
                 List<String> ids = Helper.getFavCategories(this).get(selectedSubCollection);
                 if (ids == null) { selectedSubCollection = null; showSubCollectionList = true; refresh(); return; }
-                for (String id : ids) {
-                    Bhajan b = BhajanRepo.find(all, id);
-                    if (b != null && Helper.isFav(this, b.id)) base.add(b);
-                }
+                for (String id : ids) { Bhajan b = BhajanRepo.find(all, id); if (b != null && Helper.isFav(this, b.id)) base.add(b); }
             }
         } else if (tab == TAB_COLLECTIONS && selectedCollection != null) {
             List<String> ids = Helper.getBhajanCategories(this).get(selectedCollection);
             if (ids == null) { selectedCollection = null; refresh(); return; }
-            for (String id : ids) {
-                Bhajan b = BhajanRepo.find(all, id);
-                if (b != null) base.add(b);
-            }
+            for (String id : ids) { Bhajan b = BhajanRepo.find(all, id); if (b != null) base.add(b); }
         } else if (tab == TAB_RECENT) {
             int recentLimit = Helper.getLibraryRecentLimit(this);
             List<String> recentIds = Helper.getRecentIds(this);
@@ -526,7 +542,7 @@ public class LibraryActivity extends AppCompatActivity {
             }
         }
 
-        // ── BUG FIX: deity filter applies ONLY to the All view ──
+        // Deity filter applies ONLY in the All view
         boolean applyDeityFilter = (tab == TAB_ALL && !showingArchived);
 
         List<Bhajan> out = new ArrayList<>();
@@ -538,16 +554,15 @@ public class LibraryActivity extends AppCompatActivity {
 
         boolean swipeEnabled = (tab == TAB_ALL || tab == TAB_RECENT) && !showingArchived;
         boolean empty = out.isEmpty() && !all.isEmpty();
-        boolean showRecentCards = (tab == TAB_ALL && !showingArchived && !searching);
 
         final List<Bhajan> finalOut = out;
         final String query = q;
         Runnable applyUpdate = () -> {
             adapter.update(finalOut);
             adapter.setSwipeArchiveEnabled(swipeEnabled);
+            if (animate) rvList.scrollToPosition(0);   // view change → start at top
             String noun = finalOut.size() == 1 ? "bhajan" : "bhajans";
             tvCount.setText(finalOut.size() + " " + noun);
-            updateRecentStrip(showRecentCards);
             emptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
             rvList.setVisibility(empty ? View.INVISIBLE : View.VISIBLE);
             if (empty) setEmptyTexts(query);
@@ -567,7 +582,6 @@ public class LibraryActivity extends AppCompatActivity {
             applyUpdate.run();
         }
     }
-
     /** Lightweight refresh after an animated removal (adapter list already updated). */
     private void refreshMetadata() {
         int count = adapter.getItemCount();
@@ -582,6 +596,40 @@ public class LibraryActivity extends AppCompatActivity {
         if (empty) setEmptyTexts(q);
     }
 
+    private void populateRecentStripCards() {
+        recentStrip.removeAllViews();
+        List<String> recentIds = Helper.getRecentIds(this);
+        int limit = Math.min(recentIds.size(), 6);
+        int shown = 0;
+        LayoutInflater inflater = LayoutInflater.from(this);
+
+        for (String id : recentIds) {
+            if (shown >= limit) break;
+            Bhajan b = BhajanRepo.find(all, id);
+            if (b == null) continue;
+
+            View card = inflater.inflate(R.layout.item_recent_card, recentStrip, false);
+            ((TextView) card.findViewById(R.id.tv_recent_title)).setText(b.titleNepali);
+            ((TextView) card.findViewById(R.id.tv_recent_type)).setText(b.type != null ? b.type : "");
+            card.setOnClickListener(v -> {
+                Intent i = new Intent(this, DetailActivity.class);
+                i.putExtra("ID", b.id);
+                i.putExtra("TITLE", b.titleNepali);
+                startActivity(i);
+                overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+            });
+            recentStrip.addView(card);
+            shown++;
+        }
+
+        if (shown == 0) {
+            recentScroll.setVisibility(View.GONE);
+            recentEmpty.setVisibility(View.VISIBLE);
+        } else {
+            recentScroll.setVisibility(View.VISIBLE);
+            recentEmpty.setVisibility(View.GONE);
+        }
+    }
     private void setEmptyTexts(String q) {
         btnEmptyAction.setVisibility(View.GONE);
         if (q != null && !q.isEmpty()) {
@@ -947,5 +995,103 @@ public class LibraryActivity extends AppCompatActivity {
             refresh(); return;
         }
         super.onBackPressed();
+    }
+    // ── Smooth scroll to top ──────────────────────────────────────
+    private void scrollToTopSmooth() {
+        if (rvList == null) return;
+        RecyclerView.LayoutManager lm = rvList.getLayoutManager();
+        if (!(lm instanceof LinearLayoutManager)) return;
+        LinearLayoutManager llm = (LinearLayoutManager) lm;
+        int firstVisible = llm.findFirstVisibleItemPosition();
+        if (firstVisible <= 0) return;                    // already at top
+        if (firstVisible > 20) {
+            // Very far down: jump close to the top, then smooth-scroll the last bit
+            rvList.scrollToPosition(8);
+            rvList.post(() -> rvList.smoothScrollToPosition(0));
+        } else {
+            rvList.smoothScrollToPosition(0);
+        }
+    }
+
+    // ── Smooth show / hide for deity chips ────────────────────────
+    private void animateChips(boolean show) {
+        if (chipsAnimator != null && chipsAnimator.isRunning()) chipsAnimator.cancel();
+        if (show) {
+            if (rvCategories.getVisibility() == View.VISIBLE) return;
+            chipsAnimator = buildExpandAnimator(rvCategories);
+        } else {
+            if (rvCategories.getVisibility() != View.VISIBLE) { rvCategories.setVisibility(View.GONE); return; }
+            chipsAnimator = buildCollapseAnimator(rvCategories);
+        }
+        chipsAnimator.start();
+    }
+
+
+    private void animateStrip(boolean show) {
+        if (stripAnimator != null && stripAnimator.isRunning()) stripAnimator.cancel();
+
+        if (show) {
+            if (recentStripContainer.getVisibility() == View.VISIBLE) return;
+            stripAnimator = buildExpandAnimator(recentStripContainer);
+        } else {
+            if (recentStripContainer.getVisibility() != View.VISIBLE) {
+                recentStripContainer.setVisibility(View.GONE);
+                return;
+            }
+            stripAnimator = buildCollapseAnimator(recentStripContainer);
+        }
+        stripAnimator.start();
+    }
+
+    private ValueAnimator buildExpandAnimator(final View v) {
+        int parentWidth = ((View) v.getParent()).getWidth();
+        v.measure(
+                View.MeasureSpec.makeMeasureSpec(parentWidth, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+        final int targetHeight = v.getMeasuredHeight();
+
+        v.getLayoutParams().height = 0;
+        v.setAlpha(0f);
+        v.setVisibility(View.VISIBLE);
+
+        ValueAnimator anim = ValueAnimator.ofInt(0, targetHeight);
+        anim.setDuration(220);
+        anim.setInterpolator(new DecelerateInterpolator());
+        anim.addUpdateListener(a -> {
+            v.getLayoutParams().height = (int) a.getAnimatedValue();
+            v.setAlpha(a.getAnimatedFraction());
+            v.requestLayout();
+        });
+        anim.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                v.getLayoutParams().height = ViewGroup.LayoutParams.WRAP_CONTENT;
+                v.setAlpha(1f);
+                v.requestLayout();
+            }
+        });
+        return anim;
+    }
+    private ValueAnimator buildCollapseAnimator(final View v) {
+        final int startHeight = v.getHeight();
+
+        ValueAnimator anim = ValueAnimator.ofInt(startHeight, 0);
+        anim.setDuration(220);
+        anim.setInterpolator(new AccelerateInterpolator());
+        anim.addUpdateListener(a -> {
+            v.getLayoutParams().height = (int) a.getAnimatedValue();
+            v.setAlpha(1f - a.getAnimatedFraction());
+            v.requestLayout();
+        });
+        anim.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                v.setVisibility(View.GONE);
+                v.getLayoutParams().height = ViewGroup.LayoutParams.WRAP_CONTENT;
+                v.setAlpha(1f);
+                v.requestLayout();
+            }
+        });
+        return anim;
     }
 }
