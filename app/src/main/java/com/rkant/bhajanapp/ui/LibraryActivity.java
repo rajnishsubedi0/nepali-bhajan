@@ -79,12 +79,17 @@ public class LibraryActivity extends AppCompatActivity {
 
     public static Intent intent(android.content.Context ctx, String category, int tab, boolean focusSearch) {
         Intent in = new Intent(ctx, LibraryActivity.class);
-        in.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP
-                | Intent.FLAG_ACTIVITY_NO_ANIMATION);
+        in.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         in.putExtra(EXTRA_CATEGORY, category);
         in.putExtra(EXTRA_TAB, tab);
         in.putExtra(EXTRA_FOCUS_SEARCH, focusSearch);
         return in;
+    }
+
+    @Override
+    public void finish() {
+        super.finish();
+        overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
     }
 
     @Override

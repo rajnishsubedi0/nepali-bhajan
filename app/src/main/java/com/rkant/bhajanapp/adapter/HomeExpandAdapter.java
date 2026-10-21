@@ -17,11 +17,7 @@ import com.rkant.bhajanapp.utils.BhajanCategories;
 
 import java.util.List;
 
-/**
- * Vertical bhajan rows for the expanded Home sections.
- * Swipe left/right reveals a "Remove" action (recent → remove from recent,
- * favourite → remove from favourites). Same gesture as swipe-to-archive.
- */
+
 public class HomeExpandAdapter extends RecyclerView.Adapter<HomeExpandAdapter.VH> {
 
     public interface OnRemove { void onRemove(Bhajan b, int position); }
@@ -67,13 +63,8 @@ public class HomeExpandAdapter extends RecyclerView.Adapter<HomeExpandAdapter.VH
         h.sub.setText(sub.toString());
         h.sub.setVisibility(sub.length() > 0 ? View.VISIBLE : View.GONE);
 
-        if (showHeart) {
-            h.fav.setVisibility(View.VISIBLE);
-            h.fav.setImageResource(R.drawable.ic_heart_filled);
-            h.fav.setColorFilter(ctx.getColor(R.color.accent));
-        } else {
-            h.fav.setVisibility(View.GONE);
-        }
+        // Heart is always hidden now
+        h.fav.setVisibility(View.GONE);
 
         h.cardContainer.setTranslationX(0);
         h.reveal.setVisibility(View.GONE);

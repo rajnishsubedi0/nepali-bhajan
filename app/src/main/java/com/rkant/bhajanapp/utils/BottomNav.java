@@ -17,6 +17,7 @@ import com.rkant.bhajanapp.ui.SettingsActivity;
  * Pass 0..3 for the tab that is currently showing.
  */
 public final class BottomNav {
+
     private BottomNav() {}
 
     public static final int HOME = 0;
@@ -28,6 +29,7 @@ public final class BottomNav {
     private static final int[] PILLS = {R.id.nav_home_pill, R.id.nav_lyrics_pill, R.id.nav_audio_pill, R.id.nav_settings_pill};
     private static final int[] ICONS = {R.id.nav_home_icon, R.id.nav_lyrics_icon, R.id.nav_audio_icon, R.id.nav_settings_icon};
     private static final int[] LABELS = {R.id.nav_home_label, R.id.nav_lyrics_label, R.id.nav_audio_label, R.id.nav_settings_label};
+
     private static final Class<?>[] TARGETS = {
             MainActivity.class, LibraryActivity.class, AudioListActivity.class, SettingsActivity.class};
 
@@ -36,10 +38,13 @@ public final class BottomNav {
             final int idx = i;
             boolean on = i == selected;
             int color = a.getColor(on ? R.color.accent : R.color.text_secondary);
+
             ((ImageView) a.findViewById(ICONS[i])).setColorFilter(color);
             ((TextView) a.findViewById(LABELS[i])).setTextColor(color);
+
             View pill = a.findViewById(PILLS[i]);
             pill.setBackgroundResource(on ? R.drawable.bg_nav_active : android.R.color.transparent);
+
             a.findViewById(ROWS[i]).setOnClickListener(v -> {
                 if (idx == selected) return;
                 open(a, idx);
@@ -47,12 +52,11 @@ public final class BottomNav {
         }
     }
 
-    /** Opens a tab. An existing instance is reused and everything above it is cleared. */
+    /** Opens a tab with a smooth cross-fade transition. */
     public static void open(Activity a, int tab) {
         Intent in = new Intent(a, TARGETS[tab]);
-        in.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP
-                | Intent.FLAG_ACTIVITY_NO_ANIMATION);
+        in.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         a.startActivity(in);
-        a.overridePendingTransition(0, 0);
+        a.overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
     }
 }

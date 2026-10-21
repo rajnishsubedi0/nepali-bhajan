@@ -1,13 +1,19 @@
 package com.rkant.bhajanapp.ui;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.animation.ObjectAnimator;
 import android.animation.PropertyValuesHolder;
+import android.animation.ValueAnimator;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.animation.AccelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -34,6 +40,7 @@ import java.util.Random;
 public class MainActivity extends AppCompatActivity {
 
     private static final int MAX_HORIZONTAL_CARDS = 10;
+    private static final long ANIM_DURATION = 280;
 
     private List<Bhajan> all = new ArrayList<>();
     private boolean backOnce = false;
@@ -47,13 +54,17 @@ public class MainActivity extends AppCompatActivity {
     private ImageView btnNowPlay;
     private LinearLayout categoriesContainer, recentContainer, favContainer, deityExpandedContainer;
     private RecyclerView rvRecentExpanded, rvFavExpanded;
-    private View btnAudio;
     private ObjectAnimator pulseAnim;
 
     // Expansion state
     private boolean deityExpanded = false;
     private boolean recentExpanded = false;
     private boolean favExpanded = false;
+
+    // Track running animations to prevent overlap on rapid taps
+    private ValueAnimator animDeityCollapse, animDeityExpand;
+    private ValueAnimator animRecentCollapse, animRecentExpand;
+    private ValueAnimator animFavCollapse, animFavExpand;
 
     private HomeExpandAdapter recentExpandAdapter;
     private HomeExpandAdapter favExpandAdapter;
@@ -84,6 +95,8 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onProgress(long position, long duration) {}
     };
+
+    private View btnAudio;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -117,10 +130,13 @@ public class MainActivity extends AppCompatActivity {
 
         ((TextView) findViewById(R.id.tv_greeting)).setText(greeting());
 
-        findViewById(R.id.search_box).setOnClickListener(v ->
-                startActivity(LibraryActivity.intent(this, "All", LibraryActivity.TAB_ALL, true)));
+        // Search box → Library with slide transition
+        findViewById(R.id.search_box).setOnClickListener(v -> {
+            startActivity(LibraryActivity.intent(this, "All", LibraryActivity.TAB_ALL, true));
+            overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+        });
 
-        // "See all" now expands in place (no redirect)
+        // "See all" toggles (animated expand/collapse)
         seeAllLibrary.setOnClickListener(v -> toggleDeity());
         seeAllRecent.setOnClickListener(v -> toggleRecent());
         seeAllFav.setOnClickListener(v -> toggleFav());
@@ -143,7 +159,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupExpandedAdapters() {
-        // Recent: swipe removes from recent history
+        // Recent: swipe removes from recent history (NO heart icon)
         recentExpandAdapter = new HomeExpandAdapter(expandedRecent, this, false,
                 (b, pos) -> {
                     Helper.removeRecent(this, b.id);
@@ -156,8 +172,8 @@ public class MainActivity extends AppCompatActivity {
         rvRecentExpanded.setNestedScrollingEnabled(false);
         rvRecentExpanded.setAdapter(recentExpandAdapter);
 
-        // Favourites: swipe removes from favourites
-        favExpandAdapter = new HomeExpandAdapter(expandedFav, this, true,
+        // Favourites: swipe removes from favourites (NO heart icon — removed per request)
+        favExpandAdapter = new HomeExpandAdapter(expandedFav, this, false,
                 (b, pos) -> {
                     Helper.toggleFav(this, b.id);
                     if (expandedFav.size() <= 1) favExpanded = false;
@@ -171,58 +187,128 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // ═══════════════════════════════════════════════════════════
-    // EXPANSION TOGGLES
+    // SMOOTH EXPAND / COLLAPSE ANIMATIONS
     // ═══════════════════════════════════════════════════════════
+
     private void toggleDeity() {
         deityExpanded = !deityExpanded;
-        applyDeityExpansion();
+        animateButtonText(seeAllLibrary, deityExpanded ? "Close" : "See all");
+        if (deityExpanded) {
+            animateSwap(hsDeity, deityExpandedContainer,
+                    v -> animDeityCollapse = v, v -> animDeityExpand = v);
+        } else {
+            animateSwap(deityExpandedContainer, hsDeity,
+                    v -> animDeityCollapse = v, v -> animDeityExpand = v);
+        }
     }
 
     private void toggleRecent() {
         recentExpanded = !recentExpanded;
-        applyRecentExpansion();
+        animateButtonText(seeAllRecent, recentExpanded ? "Close" : "See all");
+        if (recentExpanded) {
+            animateSwap(hsRecent, rvRecentExpanded,
+                    v -> animRecentCollapse = v, v -> animRecentExpand = v);
+        } else {
+            animateSwap(rvRecentExpanded, hsRecent,
+                    v -> animRecentCollapse = v, v -> animRecentExpand = v);
+        }
     }
 
     private void toggleFav() {
         favExpanded = !favExpanded;
-        applyFavExpansion();
-    }
-
-    private void applyDeityExpansion() {
-        if (deityExpanded) {
-            hsDeity.setVisibility(View.GONE);
-            deityExpandedContainer.setVisibility(View.VISIBLE);
-            seeAllLibrary.setText("Close");
-        } else {
-            hsDeity.setVisibility(View.VISIBLE);
-            deityExpandedContainer.setVisibility(View.GONE);
-            seeAllLibrary.setText("See all");
-        }
-    }
-
-    private void applyRecentExpansion() {
-        if (recentExpanded) {
-            hsRecent.setVisibility(View.GONE);
-            rvRecentExpanded.setVisibility(View.VISIBLE);
-            seeAllRecent.setText("Close");
-        } else {
-            hsRecent.setVisibility(View.VISIBLE);
-            rvRecentExpanded.setVisibility(View.GONE);
-            seeAllRecent.setText("See all");
-        }
-    }
-
-    private void applyFavExpansion() {
+        animateButtonText(seeAllFav, favExpanded ? "Close" : "See all");
         if (favExpanded) {
-            scrollFav.setVisibility(View.GONE);
-            rvFavExpanded.setVisibility(View.VISIBLE);
-            seeAllFav.setText("Close");
+            animateSwap(scrollFav, rvFavExpanded,
+                    v -> animFavCollapse = v, v -> animFavExpand = v);
         } else {
-            scrollFav.setVisibility(View.VISIBLE);
-            rvFavExpanded.setVisibility(View.GONE);
-            seeAllFav.setText("See all");
+            animateSwap(rvFavExpanded, scrollFav,
+                    v -> animFavCollapse = v, v -> animFavExpand = v);
         }
     }
+
+    /**
+     * Smoothly cross-transitions between two views:
+     * collapses hideView (height → 0 + fade out) while
+     * expanding showView (height 0 → natural + fade in).
+     */
+    private void animateSwap(final View hideView, final View showView,
+                             AnimRef collapseRef, AnimRef expandRef) {
+        // Cancel any running animations on these views
+        cancelAnim(animDeityCollapse); cancelAnim(animDeityExpand);
+        cancelAnim(animRecentCollapse); cancelAnim(animRecentExpand);
+        cancelAnim(animFavCollapse); cancelAnim(animFavExpand);
+
+        // ── Collapse outgoing view ──
+        final int startHeight = hideView.getHeight();
+        hideView.setAlpha(1f);
+        ValueAnimator collapse = ValueAnimator.ofInt(startHeight, 0);
+        collapse.setDuration(ANIM_DURATION);
+        collapse.setInterpolator(new AccelerateInterpolator(1.2f));
+        collapse.addUpdateListener(a -> {
+            hideView.getLayoutParams().height = (int) a.getAnimatedValue();
+            hideView.setAlpha(1f - a.getAnimatedFraction());
+            hideView.requestLayout();
+        });
+        collapse.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                hideView.setVisibility(View.GONE);
+                hideView.getLayoutParams().height = ViewGroup.LayoutParams.WRAP_CONTENT;
+                hideView.setAlpha(1f);
+                hideView.requestLayout();
+            }
+        });
+        collapseRef.set(collapse);
+        collapse.start();
+
+        // ── Expand incoming view ──
+        int parentWidth = ((View) showView.getParent()).getWidth();
+        showView.measure(
+                View.MeasureSpec.makeMeasureSpec(parentWidth, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        );
+        final int targetHeight = showView.getMeasuredHeight();
+        showView.getLayoutParams().height = 1;
+        showView.setAlpha(0f);
+        showView.setVisibility(View.VISIBLE);
+
+        ValueAnimator expand = ValueAnimator.ofInt(1, targetHeight);
+        expand.setDuration(ANIM_DURATION);
+        expand.setInterpolator(new DecelerateInterpolator(1.2f));
+        expand.addUpdateListener(a -> {
+            showView.getLayoutParams().height = (int) a.getAnimatedValue();
+            showView.setAlpha(a.getAnimatedFraction());
+            showView.requestLayout();
+        });
+        expand.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                showView.getLayoutParams().height = ViewGroup.LayoutParams.WRAP_CONTENT;
+                showView.setAlpha(1f);
+                showView.requestLayout();
+            }
+        });
+        expandRef.set(expand);
+        expand.start();
+    }
+
+    /** Smoothly fades button text from current label to new label. */
+    private void animateButtonText(final TextView btn, final String newText) {
+        btn.animate()
+                .alpha(0f)
+                .setDuration(120)
+                .withEndAction(() -> {
+                    btn.setText(newText);
+                    btn.animate().alpha(1f).setDuration(150).start();
+                })
+                .start();
+    }
+
+    private void cancelAnim(ValueAnimator anim) {
+        if (anim != null && anim.isRunning()) anim.cancel();
+    }
+
+    private interface AnimRef { void set(ValueAnimator v); }
 
     // ═══════════════════════════════════════════════════════════
     // CONTENT BINDING
@@ -239,6 +325,22 @@ public class MainActivity extends AppCompatActivity {
         bindCategories();
         bindRecent();
         bindFavourites();
+        applyExpansionState();
+    }
+
+    /** Sets expansion visibility instantly (no animation) — used during data refresh. */
+    private void applyExpansionState() {
+        hsDeity.setVisibility(deityExpanded ? View.GONE : View.VISIBLE);
+        deityExpandedContainer.setVisibility(deityExpanded ? View.VISIBLE : View.GONE);
+        seeAllLibrary.setText(deityExpanded ? "Close" : "See all");
+
+        hsRecent.setVisibility(recentExpanded ? View.GONE : View.VISIBLE);
+        rvRecentExpanded.setVisibility(recentExpanded ? View.VISIBLE : View.GONE);
+        seeAllRecent.setText(recentExpanded ? "Close" : "See all");
+
+        scrollFav.setVisibility(favExpanded ? View.GONE : View.VISIBLE);
+        rvFavExpanded.setVisibility(favExpanded ? View.VISIBLE : View.GONE);
+        seeAllFav.setText(favExpanded ? "Close" : "See all");
     }
 
     private void bindDaily() {
@@ -253,9 +355,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void bindCategories() {
-        // Horizontal (collapsed)
         categoriesContainer.removeAllViews();
-        // Vertical (expanded)
         deityExpandedContainer.removeAllViews();
         LayoutInflater inflater = LayoutInflater.from(this);
 
@@ -273,21 +373,24 @@ public class MainActivity extends AppCompatActivity {
             ((TextView) tile.findViewById(R.id.tv_cat_name)).setText(BhajanCategories.NEPALI[i]);
             ((TextView) tile.findViewById(R.id.tv_cat_en)).setText(BhajanCategories.ENGLISH[i]);
             ((TextView) tile.findViewById(R.id.tv_cat_count)).setText(count + (count == 1 ? " bhajan" : " bhajans"));
-            tile.setOnClickListener(v ->
-                    startActivity(LibraryActivity.intent(this, english, LibraryActivity.TAB_ALL, false)));
+            tile.setOnClickListener(v -> {
+                startActivity(LibraryActivity.intent(this, english, LibraryActivity.TAB_ALL, false));
+                overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+            });
             categoriesContainer.addView(tile);
 
-            // Vertical row
+            // Vertical row (expanded)
             View row = inflater.inflate(R.layout.item_home_deity_row, deityExpandedContainer, false);
             row.setBackgroundResource(gradient);
             ((TextView) row.findViewById(R.id.tv_deity_name)).setText(BhajanCategories.NEPALI[i]);
             ((TextView) row.findViewById(R.id.tv_deity_en)).setText(BhajanCategories.ENGLISH[i]);
             ((TextView) row.findViewById(R.id.tv_deity_count)).setText(count + (count == 1 ? " bhajan" : " bhajans"));
-            row.setOnClickListener(v ->
-                    startActivity(LibraryActivity.intent(this, english, LibraryActivity.TAB_ALL, false)));
+            row.setOnClickListener(v -> {
+                startActivity(LibraryActivity.intent(this, english, LibraryActivity.TAB_ALL, false));
+                overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+            });
             deityExpandedContainer.addView(row);
         }
-        applyDeityExpansion();
     }
 
     private void bindRecent() {
@@ -302,17 +405,14 @@ public class MainActivity extends AppCompatActivity {
             if (recentList.size() >= limit) break;
         }
 
-        // Horizontal strip (capped)
         for (int i = 0; i < Math.min(recentList.size(), MAX_HORIZONTAL_CARDS); i++) {
             recentContainer.addView(makeCard(recentList.get(i), recentContainer));
         }
 
-        // Vertical expanded (all)
         expandedRecent.addAll(recentList);
         recentExpandAdapter.update(expandedRecent);
 
         sectionRecent.setVisibility(recentList.isEmpty() ? View.GONE : View.VISIBLE);
-        applyRecentExpansion();
     }
 
     private void bindFavourites() {
@@ -322,18 +422,15 @@ public class MainActivity extends AppCompatActivity {
         List<Bhajan> favList = new ArrayList<>();
         for (Bhajan b : all) if (Helper.isFav(this, b.id)) favList.add(b);
 
-        // Horizontal strip (capped)
         for (int i = 0; i < Math.min(favList.size(), MAX_HORIZONTAL_CARDS); i++) {
             favContainer.addView(makeCard(favList.get(i), favContainer));
         }
 
-        // Vertical expanded (all)
         expandedFav.addAll(favList);
         favExpandAdapter.update(expandedFav);
 
         scrollFav.setVisibility(favList.isEmpty() ? View.GONE : View.VISIBLE);
         favEmpty.setVisibility(favList.isEmpty() ? View.VISIBLE : View.GONE);
-        applyFavExpansion();
     }
 
     private View makeCard(Bhajan b, LinearLayout parent) {
@@ -352,6 +449,7 @@ public class MainActivity extends AppCompatActivity {
         i.putExtra("ID", b.id);
         i.putExtra("TITLE", b.titleNepali);
         startActivity(i);
+        overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
     }
 
     private void updateNowPlaying(boolean isPlaying, String title) {
@@ -390,14 +488,12 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        // Collapse any expanded section before exiting
+        // Collapse expanded sections first
         if (deityExpanded || recentExpanded || favExpanded) {
             deityExpanded = false;
             recentExpanded = false;
             favExpanded = false;
-            applyDeityExpansion();
-            applyRecentExpansion();
-            applyFavExpansion();
+            applyExpansionState();
             return;
         }
         long now = System.currentTimeMillis();
