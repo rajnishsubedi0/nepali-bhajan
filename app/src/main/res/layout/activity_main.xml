@@ -232,8 +232,8 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="NOW PLAYING"
                         android:letterSpacing="0.08"
+                        android:text="NOW PLAYING"
                         android:textColor="@color/accent"
                         android:textSize="11sp"
                         android:textStyle="bold" />
@@ -261,7 +261,7 @@
                     android:tint="@color/on_gradient" />
             </LinearLayout>
 
-            <!-- Browse by deity -->
+            <!-- ══ BROWSE BY DEITY (expandable) ══ -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -292,6 +292,7 @@
             </LinearLayout>
 
             <HorizontalScrollView
+                android:id="@+id/hs_deity"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
@@ -308,7 +309,18 @@
                     android:orientation="horizontal" />
             </HorizontalScrollView>
 
-            <!-- Continue reading -->
+            <!-- Expanded deity list (vertical) -->
+            <LinearLayout
+                android:id="@+id/deity_expanded_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="20dp"
+                android:layout_marginEnd="20dp"
+                android:layout_marginTop="12dp"
+                android:orientation="vertical"
+                android:visibility="gone" />
+
+            <!-- ══ CONTINUE READING (expandable + swipe-to-remove) ══ -->
             <LinearLayout
                 android:id="@+id/section_recent"
                 android:layout_width="match_parent"
@@ -346,6 +358,7 @@
                 </LinearLayout>
 
                 <HorizontalScrollView
+                    android:id="@+id/hs_recent"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
@@ -361,9 +374,20 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal" />
                 </HorizontalScrollView>
+
+                <!-- Expanded recent list (vertical, swipe to remove) -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_recent_expanded"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:clipToPadding="false"
+                    android:nestedScrollingEnabled="false"
+                    android:overScrollMode="never"
+                    android:visibility="gone" />
             </LinearLayout>
 
-            <!-- Favourites -->
+            <!-- ══ YOUR FAVOURITES (expandable + swipe-to-remove) ══ -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -410,6 +434,17 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal" />
             </HorizontalScrollView>
+
+            <!-- Expanded favourites list (vertical, swipe to remove) -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_fav_expanded"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:clipToPadding="false"
+                android:nestedScrollingEnabled="false"
+                android:overScrollMode="never"
+                android:visibility="gone" />
 
             <LinearLayout
                 android:id="@+id/fav_empty"

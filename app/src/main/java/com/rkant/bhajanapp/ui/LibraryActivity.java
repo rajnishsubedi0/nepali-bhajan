@@ -46,10 +46,13 @@ public class LibraryActivity extends AppCompatActivity {
     public static final int TAB_ALL = 0;
     public static final int TAB_FAV = 1;
     public static final int TAB_COLLECTIONS = 2;
+    public static final int TAB_RECENT = 3;
 
     private static final int KIND_GENERAL = 0;
     private static final int KIND_FAV = 1;
     private static final int KIND_ARCHIVE = 2;
+
+
 
     private final List<String> cats = Arrays.asList("All", "Krishna", "Shiva", "Hari", "Ram", "Others");
 
@@ -352,23 +355,27 @@ public class LibraryActivity extends AppCompatActivity {
         int favCount = Helper.favCount(this);
         int collectionsCount = Helper.getBhajanCategories(this).size();
         int archivedCount = Helper.archivedCount(this);
+        int recentCount = Helper.getRecentIds(this).size();
 
         ((TextView) v.findViewById(R.id.count_all)).setText(allCount + "");
         ((TextView) v.findViewById(R.id.count_fav)).setText(favCount + "");
         ((TextView) v.findViewById(R.id.count_collections)).setText(collectionsCount + "");
         ((TextView) v.findViewById(R.id.count_archived)).setText(archivedCount + "");
+        ((TextView) v.findViewById(R.id.count_recent)).setText(recentCount + "");
 
         // Checkmarks
         v.findViewById(R.id.check_all).setVisibility(tab == TAB_ALL && !showingArchived ? View.VISIBLE : View.GONE);
         v.findViewById(R.id.check_fav).setVisibility(tab == TAB_FAV ? View.VISIBLE : View.GONE);
         v.findViewById(R.id.check_collections).setVisibility(tab == TAB_COLLECTIONS ? View.VISIBLE : View.GONE);
         v.findViewById(R.id.check_archived).setVisibility(showingArchived ? View.VISIBLE : View.GONE);
+        v.findViewById(R.id.check_recent).setVisibility(tab == TAB_RECENT && !showingArchived ? View.VISIBLE : View.GONE);
 
         // Navigation
         v.findViewById(R.id.menu_all).setOnClickListener(x -> { dialog.dismiss(); switchView(TAB_ALL, false); });
         v.findViewById(R.id.menu_fav).setOnClickListener(x -> { dialog.dismiss(); switchView(TAB_FAV, false); });
         v.findViewById(R.id.menu_collections).setOnClickListener(x -> { dialog.dismiss(); switchView(TAB_COLLECTIONS, false); });
         v.findViewById(R.id.menu_archived).setOnClickListener(x -> { dialog.dismiss(); switchView(TAB_ALL, true); });
+        v.findViewById(R.id.menu_recent).setOnClickListener(x -> { dialog.dismiss(); switchView(TAB_RECENT, false); });
 
         // Collapsible Manage Data
         View manageToggle = v.findViewById(R.id.menu_manage_toggle);
@@ -436,9 +443,11 @@ public class LibraryActivity extends AppCompatActivity {
     private void refresh() {
         if (adapter == null) return;
 
+        // ── Update UI labels ──
         updateActiveViewLabel();
         updateFabVisibility();
 
+        // ── Collection list views (show the list of collections, not bhajans) ──
         if (tab == TAB_COLLECTIONS && selectedCollection == null) {
             showCollectionList(KIND_GENERAL);
             return;
@@ -452,16 +461,20 @@ public class LibraryActivity extends AppCompatActivity {
             return;
         }
 
+        // ── Make sure the bhajan adapter is attached ──
         if (rvList.getAdapter() != adapter) rvList.setAdapter(adapter);
 
         String q = etSearch.getText().toString().trim().toLowerCase();
         boolean searching = !q.isEmpty();
+
         boolean includeArchived = Helper.isArchivedInListEnabled(this)
                 || (searching && Helper.isArchivedSearchable(this));
 
+        // ── Build the base list depending on which view we're in ──
         List<Bhajan> base = new ArrayList<>();
 
         if (showingArchived) {
+            // Archived view
             if (selectedSubCollection == null) {
                 for (Bhajan b : all) if (Helper.isArchived(this, b.id)) base.add(b);
             } else {
@@ -473,6 +486,7 @@ public class LibraryActivity extends AppCompatActivity {
                 }
             }
         } else if (tab == TAB_FAV) {
+            // Favourites view
             if (selectedSubCollection == null) {
                 for (Bhajan b : all) if (Helper.isFav(this, b.id)) base.add(b);
             } else {
@@ -484,21 +498,35 @@ public class LibraryActivity extends AppCompatActivity {
                 }
             }
         } else if (tab == TAB_COLLECTIONS && selectedCollection != null) {
+            // Inside a specific collection
             List<String> ids = Helper.getBhajanCategories(this).get(selectedCollection);
             if (ids == null) { selectedCollection = null; refresh(); return; }
             for (String id : ids) {
                 Bhajan b = BhajanRepo.find(all, id);
                 if (b != null) base.add(b);
             }
+        } else if (tab == TAB_RECENT) {
+            // Recent view
+            int recentLimit = Helper.getLibraryRecentLimit(this);
+            List<String> recentIds = Helper.getRecentIds(this);
+            int count = 0;
+            for (String id : recentIds) {
+                if (count >= recentLimit) break;
+                Bhajan b = BhajanRepo.find(all, id);
+                if (b != null) { base.add(b); count++; }
+            }
         } else {
+            // TAB_ALL — everything not archived (unless rules include archived)
             for (Bhajan b : all) {
                 if (!Helper.isArchived(this, b.id) || includeArchived) base.add(b);
             }
         }
 
+        // ── Are we inside a sub-view? (collection / fav sub / archive sub) ──
         boolean customView = (tab == TAB_COLLECTIONS && selectedCollection != null)
                 || ((tab == TAB_FAV || showingArchived) && selectedSubCollection != null);
 
+        // ── Apply deity filter + search ──
         List<Bhajan> out = new ArrayList<>();
         for (Bhajan b : base) {
             if (!customView && !BhajanRepo.inCategory(b, category)) continue;
@@ -506,15 +534,21 @@ public class LibraryActivity extends AppCompatActivity {
             out.add(b);
         }
 
+        // ── Update the list ──
         adapter.update(out);
-        adapter.setSwipeArchiveEnabled(tab == TAB_ALL && !showingArchived);
 
+        boolean swipeEnabled = (tab == TAB_ALL || tab == TAB_RECENT);
+        adapter.setSwipeArchiveEnabled(swipeEnabled);
+
+        // ── Count label ──
         String noun = out.size() == 1 ? "bhajan" : "bhajans";
         tvCount.setText(out.size() + " " + noun);
 
+        // ── Recent strip (only in All tab, not searching, not in a sub-view) ──
         boolean showRecentCards = (tab == TAB_ALL && !showingArchived && !searching && !customView);
         updateRecentStrip(showRecentCards);
 
+        // ── Empty state ──
         boolean empty = out.isEmpty() && !all.isEmpty();
         emptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
         rvList.setVisibility(empty ? View.INVISIBLE : View.VISIBLE);
@@ -526,7 +560,7 @@ public class LibraryActivity extends AppCompatActivity {
                 tvEmptySub.setText("Try a different search or choose another deity.");
             } else if (showingArchived) {
                 tvEmptyTitle.setText("No archived bhajans");
-                tvEmptySub.setText("Swipe a bhajan left or right to archive it.");
+                tvEmptySub.setText("Swipe a bhajan left or right in All or Recent to archive it.");
             } else if (tab == TAB_FAV) {
                 if (selectedSubCollection != null) {
                     tvEmptyTitle.setText("No bhajans here yet");
@@ -540,18 +574,21 @@ public class LibraryActivity extends AppCompatActivity {
                 tvEmptySub.setText("Long press any bhajan and choose \u201CAdd to Collection\u201D.");
                 btnEmptyAction.setVisibility(View.VISIBLE);
                 btnEmptyAction.setText("Browse all bhajans");
+            } else if (tab == TAB_RECENT) {
+                tvEmptyTitle.setText("Nothing opened yet");
+                tvEmptySub.setText("Bhajans you read will show up here.");
             } else {
                 tvEmptyTitle.setText("No bhajans here");
                 tvEmptySub.setText("Everything might be archived.");
             }
         }
     }
-
     private void updateActiveViewLabel() {
         String label;
         if (showingArchived) label = "Archived";
         else if (tab == TAB_FAV) label = "Favourites";
         else if (tab == TAB_COLLECTIONS) label = "Collections";
+        else if (tab == TAB_RECENT) label = "Recent";
         else label = "All";
         if (selectedCollection != null) label = selectedCollection;
         if (selectedSubCollection != null) label = selectedSubCollection;
