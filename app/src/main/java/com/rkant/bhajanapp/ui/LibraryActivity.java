@@ -404,6 +404,8 @@ public class LibraryActivity extends AppCompatActivity {
 
         v.findViewById(R.id.menu_all).setOnClickListener(x -> { dialog.dismiss(); switchView(TAB_ALL, false); });
         v.findViewById(R.id.menu_recent).setOnClickListener(x -> { dialog.dismiss(); switchView(TAB_RECENT, false); });
+
+        // Favourite menu
         v.findViewById(R.id.menu_fav).setOnClickListener(x -> { dialog.dismiss(); switchView(TAB_FAV, false); });
         v.findViewById(R.id.menu_collections).setOnClickListener(x -> { dialog.dismiss(); switchView(TAB_COLLECTIONS, false); });
         v.findViewById(R.id.menu_archived).setOnClickListener(x -> { dialog.dismiss(); switchView(TAB_ALL, true); });

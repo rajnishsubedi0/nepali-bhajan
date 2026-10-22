@@ -1,3 +1,4 @@
+
 package com.rkant.bhajanapp.ui;
 
 import android.animation.ValueAnimator;
@@ -105,9 +106,6 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // Every other screen applies the saved theme first. This one is also launched straight
-        // from the media notification (possibly as the first screen after a cold start), where
-        // it would otherwise ignore the Light/Dark choice from Settings.
         Helper.applyTheme(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_music_player);
@@ -127,7 +125,6 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
         btnFav = findViewById(R.id.btn_fav);
         btnDownload = findViewById(R.id.btn_download);
         btnClose = findViewById(R.id.btn_close_player);
-
         ImageView btnPrev = findViewById(R.id.btn_prev);
         ImageView btnNext = findViewById(R.id.btn_next);
 
@@ -138,7 +135,6 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
         btnRepeat.setOnClickListener(v -> PlaybackManager.getInstance().cycleRepeat());
         tvSpeed.setOnClickListener(v -> cyclePlaybackSpeed());
         tvSleep.setOnClickListener(v -> showSleepTimerDialog());
-
         btnClose.setOnClickListener(v -> performClose());
 
         btnFav.setOnClickListener(v -> {
@@ -148,12 +144,16 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
             if (isCurrentlyFav) {
                 Helper.showConfirm(this, "Remove from Favourites",
                         "Remove this bhajan from favourites?", "Remove", true, () -> {
-                            db.toggleFavourite(currentMediaId);
+                            db.setFavourite(currentMediaId, false);
+                            // Sync: also drop it from every audio favourite collection
+                            Helper.removeAudioFavFromAllCategories(this, currentMediaId);
+                            if (currentTrack != null) currentTrack.isFavourite = false;
                             updateFavButton();
                             Toast.makeText(this, "Removed from favourites", Toast.LENGTH_SHORT).show();
                         });
             } else {
-                db.toggleFavourite(currentMediaId);
+                db.setFavourite(currentMediaId, true);
+                if (currentTrack != null) currentTrack.isFavourite = true;
                 updateFavButton();
                 Toast.makeText(this, "Added to favourites", Toast.LENGTH_SHORT).show();
             }
@@ -193,8 +193,10 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
                 if (fromUser) PlaybackManager.getInstance().seekTo(progress);
                 tvCurrentTime.setText(Helper.formatTime(progress));
             }
+
             @Override
             public void onStartTrackingTouch(SeekBar bar) { isTracking = true; }
+
             @Override
             public void onStopTrackingTouch(SeekBar bar) { isTracking = false; }
         });
@@ -204,6 +206,7 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
     }
 
     // ── Drag to dismiss ──────────────────────────────────────────
+
     private float clamp01(float v) { return Math.max(0f, Math.min(1f, v)); }
 
     @Override
@@ -285,11 +288,11 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
     }
 
     // ── Current track / download ─────────────────────────────────
+
     private void loadCurrentTrack() {
         final String id = currentMediaId;
         if (id == null) { btnDownload.setVisibility(View.GONE); return; }
-        // Read the local database only. This used to call AudioRepository.loadTracks(), which
-        // re-downloaded the whole audio manifest on every track change and download broadcast.
+
         final Context app = getApplicationContext();
         new Thread(() -> {
             AudioDatabase db = AudioDatabase.getInstance(app);
@@ -322,6 +325,7 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
     }
 
     // ── Speed / Sleep / Repeat / Fav ─────────────────────────────
+
     private void cyclePlaybackSpeed() {
         float[] speeds = {0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f};
         float current = PlaybackManager.getInstance().getPlaybackSpeed();
@@ -375,7 +379,6 @@ public class MusicPlayerActivity extends AppCompatActivity implements SheetDragL
         input.setHint("Minutes");
         input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
         input.setPadding(48, 32, 48, 16);
-
         new AlertDialog.Builder(this)
                 .setTitle("Custom Sleep Timer")
                 .setMessage("Enter sleep time in minutes:")

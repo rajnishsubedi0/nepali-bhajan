@@ -1,3 +1,4 @@
+
 package com.rkant.bhajanapp.utils;
 
 import android.content.ContentValues;
@@ -51,7 +52,6 @@ public class AudioDatabase extends SQLiteOpenHelper {
         onCreate(db);
     }
 
-
     public void saveTracks(List<AudioTrack> tracks) {
         SQLiteDatabase db = getWritableDatabase();
         db.beginTransaction();
@@ -60,7 +60,6 @@ public class AudioDatabase extends SQLiteOpenHelper {
                 AudioTrack t = tracks.get(i);
                 // Check if track already exists to preserve fav/download state
                 AudioTrack existing = getTrackByIdInternal(db, t.id);
-
                 ContentValues cv = new ContentValues();
                 cv.put("id", t.id);
                 cv.put("title", t.title);
@@ -68,7 +67,6 @@ public class AudioDatabase extends SQLiteOpenHelper {
                 cv.put("duration", t.durationSec);
                 cv.put("category", t.category);
                 cv.put("sort_order", i);
-
                 if (existing != null) {
                     // Preserve existing favourite and download state
                     cv.put("is_favourite", existing.isFavourite ? 1 : 0);
@@ -79,7 +77,6 @@ public class AudioDatabase extends SQLiteOpenHelper {
                     cv.put("is_downloaded", 0);
                     cv.putNull("local_path");
                 }
-
                 db.insertWithOnConflict(TABLE, null, cv, SQLiteDatabase.CONFLICT_REPLACE);
             }
 
@@ -105,12 +102,10 @@ public class AudioDatabase extends SQLiteOpenHelper {
         }
     }
 
-
     public List<AudioTrack> getAllTracks() {
         List<AudioTrack> tracks = new ArrayList<>();
         SQLiteDatabase db = getReadableDatabase();
         Cursor cursor = db.query(TABLE, null, null, null, null, null, "sort_order ASC");
-
         try {
             while (cursor.moveToNext()) {
                 tracks.add(cursorToTrack(cursor));
@@ -140,13 +135,24 @@ public class AudioDatabase extends SQLiteOpenHelper {
     public void toggleFavourite(String id) {
         AudioTrack track = getTrackById(id);
         if (track == null) return;
+        setFavourite(id, !track.isFavourite);
+    }
 
+    /** Sets the favourite flag explicitly (used to stay in sync with favourite collections). */
+    public void setFavourite(String id, boolean favourite) {
+        if (id == null) return;
         SQLiteDatabase db = getWritableDatabase();
         ContentValues cv = new ContentValues();
-        cv.put("is_favourite", track.isFavourite ? 0 : 1);
+        cv.put("is_favourite", favourite ? 1 : 0);
         db.update(TABLE, cv, "id = ?", new String[]{id});
     }
 
+    public void clearAllFavourites() {
+        SQLiteDatabase db = getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put("is_favourite", 0);
+        db.update(TABLE, cv, null, null);
+    }
 
     public boolean isFavourite(String id) {
         AudioTrack track = getTrackById(id);
@@ -169,7 +175,6 @@ public class AudioDatabase extends SQLiteOpenHelper {
         db.update(TABLE, cv, "id = ?", new String[]{id});
     }
 
-
     private AudioTrack cursorToTrack(Cursor cursor) {
         String id = cursor.getString(cursor.getColumnIndexOrThrow("id"));
         String title = cursor.getString(cursor.getColumnIndexOrThrow("title"));
@@ -185,7 +190,6 @@ public class AudioDatabase extends SQLiteOpenHelper {
         track.isFavourite = (isFav == 1);
         track.isDownloaded = (isDownloaded == 1);
         track.localPath = localPath;
-
         if (track.isDownloaded) {
             track.downloadState = AudioTrack.STATE_DOWNLOADED;
         }

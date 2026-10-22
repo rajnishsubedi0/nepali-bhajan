@@ -42,6 +42,22 @@ public class AudioAdapter extends RecyclerView.Adapter<AudioAdapter.VH> {
         notifyDataSetChanged();
     }
 
+    /** Removes one row with the built-in RecyclerView removal animation. */
+    public void removeItemAt(int position) {
+        if (tracks == null || position < 0 || position >= tracks.size()) return;
+        tracks.remove(position);
+        notifyItemRemoved(position);
+    }
+
+    /** Finds the current adapter position of a track (by id). */
+    public int positionOf(AudioTrack t) {
+        if (t == null || t.id == null || tracks == null) return -1;
+        for (int i = 0; i < tracks.size(); i++) {
+            if (t.id.equals(tracks.get(i).id)) return i;
+        }
+        return -1;
+    }
+
     @NonNull
     @Override
     public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -58,7 +74,7 @@ public class AudioAdapter extends RecyclerView.Adapter<AudioAdapter.VH> {
             h.duration.setText("--:--");
         }
 
-        // Favourite indicator - use accent color instead of red
+        // Favourite indicator
         h.favInd.setVisibility(track.isFavourite ? View.VISIBLE : View.GONE);
         h.favInd.setColorFilter(ctx.getColor(R.color.accent));
 
@@ -75,8 +91,11 @@ public class AudioAdapter extends RecyclerView.Adapter<AudioAdapter.VH> {
             h.dlInd.setVisibility(View.GONE);
         }
 
+        boolean archived = Helper.isAudioArchived(ctx, track.id);
         boolean isThisTrack = track.id != null && track.id.equals(currentPlayingId);
-        h.row.setBackgroundResource(isThisTrack ? R.drawable.bg_card_playing : R.drawable.bg_card);
+        h.row.setBackgroundResource(isThisTrack ? R.drawable.bg_card_playing
+                : archived ? R.drawable.bg_card_archived : R.drawable.bg_card);
+
         if (isThisTrack) {
             h.play.setImageResource(isPlaying ? R.drawable.ic_pause : R.drawable.ic_play_arrow);
             h.play.setColorFilter(ctx.getColor(R.color.accent));
@@ -89,13 +108,11 @@ public class AudioAdapter extends RecyclerView.Adapter<AudioAdapter.VH> {
             int pos = h.getAdapterPosition();
             if (pos != RecyclerView.NO_POSITION) listener.onRowClick(track, pos);
         });
-
         h.row.setOnLongClickListener(v -> {
             int pos = h.getAdapterPosition();
             if (pos != RecyclerView.NO_POSITION) listener.onOptionsClick(track, pos);
             return true;
         });
-
         h.play.setOnClickListener(v -> {
             int pos = h.getAdapterPosition();
             if (pos != RecyclerView.NO_POSITION) listener.onPlayPauseClick(track, pos);

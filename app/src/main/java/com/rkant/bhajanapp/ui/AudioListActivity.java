@@ -1,3 +1,4 @@
+
 package com.rkant.bhajanapp.ui;
 
 import android.Manifest;
@@ -24,6 +25,8 @@ import android.view.View;
 import android.content.res.ColorStateList;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -43,6 +46,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.rkant.bhajanapp.R;
 import com.rkant.bhajanapp.adapter.AudioAdapter;
+import com.rkant.bhajanapp.adapter.BhajanCategoryAdapter;
 import com.rkant.bhajanapp.adapter.PlaylistAdapter;
 import com.rkant.bhajanapp.model.AudioTrack;
 import com.rkant.bhajanapp.utils.AudioDatabase;
@@ -64,11 +68,13 @@ public class AudioListActivity extends AppCompatActivity
         implements AudioAdapter.OnTrackAction, PlaylistAdapter.OnPlaylistAction, SheetBus.Listener {
 
     private static final int REQ_NOTIFICATION = 1001;
+
     private static final int FILTER_ALL = 0;
     private static final int FILTER_FAV = 1;
     private static final int FILTER_DOWNLOADS = 2;
     private static final int FILTER_RECENT = 3;
     private static final int FILTER_PLAYLISTS = 4;
+    private static final int FILTER_ARCHIVE = 5;
 
     // Increased threshold so mini player doesn't dismiss too easily
     private static final float MINI_PLAYER_SWIPE_THRESHOLD = 350f;
@@ -77,29 +83,45 @@ public class AudioListActivity extends AppCompatActivity
     private RecyclerView recyclerView;
     private AudioAdapter audioAdapter;
     private PlaylistAdapter playlistAdapter;
+    private BhajanCategoryAdapter audioCategoryAdapter;
     private final List<AudioTrack> allTracks = new ArrayList<>();
     private final List<AudioTrack> displayedTracks = new ArrayList<>();
+
     private SwipeRefreshLayout swipeRefresh;
     private int currentFilter = FILTER_ALL;
     private String selectedPlaylist = null;
+
+    // Favourite / Archive collection navigation (same logic as Library)
+    private boolean showSubCollectionList = false;
+    private String selectedSubCollection = null;
+
     private boolean isSyncing = false;
     private boolean currentlyPlaying = false;
 
-    private TextView filterAll, filterFav, filterDownload, filterRecent, filterPlaylist;
+    private TextView filterAll, filterFav, filterDownload, filterRecent, filterPlaylist, filterArchive;
     private String audioQuery = "";
+
     private View bottomBar, btnClearRecent, btnNewPlaylist;
     private TextView tvAudioCount;
+    private TextView tvAudioActiveView;
+    private View fabAdd;
+
     private View miniPlayer;
     private TextView miniTitle;
     private ProgressBar miniProgress;
     private ImageView miniPlay;
+
     private View contentView;
     private View dimOverlay;
     private ValueAnimator blurAnim;
     private float sheetBlur = 0f;
-
     private float downX = 0;
     private boolean isSwiping = false;
+
+    // Header search toggle (same behaviour as Library)
+    private View audioTitleGroup, audioSearchInline;
+    private EditText etAudioSearch;
+    private boolean searchOpen = false;
 
     private ConnectivityManager connectivityManager;
     private ConnectivityManager.NetworkCallback networkCallback;
@@ -156,7 +178,6 @@ public class AudioListActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_audio_list);
         BottomNav.setup(this, BottomNav.AUDIO);
-
         requestNotificationPermission();
         BatteryHelper.showGuideIfNeeded(this);
 
@@ -164,6 +185,31 @@ public class AudioListActivity extends AppCompatActivity
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         audioAdapter = new AudioAdapter(displayedTracks, this, this);
         playlistAdapter = new PlaylistAdapter(this, this);
+
+        // Favourite / Archive collection list (same adapter the Library uses, counting tracks)
+        audioCategoryAdapter = new BhajanCategoryAdapter(this, new BhajanCategoryAdapter.OnCategoryAction() {
+            @Override
+            public void onCategoryClick(String name) {
+                showSubCollectionList = false;
+                selectedSubCollection = BhajanCategoryAdapter.ALL_ITEM.equals(name) ? null : name;
+                refreshDisplayedList();
+            }
+
+            @Override
+            public void onCategoryDelete(String name) {
+                final boolean fav = currentFilter == FILTER_FAV;
+                Helper.showConfirm(AudioListActivity.this, "Delete Collection",
+                        "Delete collection \u201C" + name + "\u201D? The tracks inside it will not be deleted.",
+                        "Delete", true, () -> {
+                            if (fav) Helper.deleteAudioFavCategory(AudioListActivity.this, name);
+                            else Helper.deleteAudioArchiveCategory(AudioListActivity.this, name);
+                            Toast.makeText(AudioListActivity.this, "Collection deleted", Toast.LENGTH_SHORT).show();
+                            refreshDisplayedList();
+                        });
+            }
+        });
+        audioCategoryAdapter.setNoun("track", "tracks");
+
         recyclerView.setAdapter(audioAdapter);
 
         swipeRefresh = findViewById(R.id.swipe_refresh);
@@ -171,25 +217,37 @@ public class AudioListActivity extends AppCompatActivity
 
         contentView = findViewById(R.id.audio_content);
         dimOverlay = findViewById(R.id.dim_overlay);
+
         bottomBar = findViewById(R.id.bottom_bar);
         tvAudioCount = findViewById(R.id.tv_audio_count);
+        tvAudioActiveView = findViewById(R.id.tv_audio_active_view);
         btnClearRecent = findViewById(R.id.btn_clear_recent);
         btnNewPlaylist = findViewById(R.id.btn_new_playlist);
+        fabAdd = findViewById(R.id.fab_audio_add);
 
         filterAll = findViewById(R.id.filter_all);
         filterFav = findViewById(R.id.filter_fav);
         filterDownload = findViewById(R.id.filter_download);
         filterRecent = findViewById(R.id.filter_recent);
         filterPlaylist = findViewById(R.id.filter_playlist);
+        filterArchive = findViewById(R.id.filter_archive);
 
         filterAll.setOnClickListener(v -> setFilter(FILTER_ALL));
         filterFav.setOnClickListener(v -> setFilter(FILTER_FAV));
         filterDownload.setOnClickListener(v -> setFilter(FILTER_DOWNLOADS));
         filterRecent.setOnClickListener(v -> setFilter(FILTER_RECENT));
         filterPlaylist.setOnClickListener(v -> setFilter(FILTER_PLAYLISTS));
+        filterArchive.setOnClickListener(v -> setFilter(FILTER_ARCHIVE));
 
-        EditText etAudioSearch = findViewById(R.id.et_audio_search);
+        // ── Header search (same animated inline search as Library) ──
+        audioTitleGroup = findViewById(R.id.audio_title_group);
+        audioSearchInline = findViewById(R.id.audio_search_inline);
+        etAudioSearch = findViewById(R.id.et_audio_search);
         View btnAudioSearchClear = findViewById(R.id.btn_audio_search_clear);
+
+        findViewById(R.id.btn_audio_search_toggle).setOnClickListener(v -> toggleSearch());
+        findViewById(R.id.btn_audio_overflow).setOnClickListener(v -> showOverflowMenu());
+        fabAdd.setOnClickListener(v -> handleFabClick());
 
         etAudioSearch.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
@@ -200,7 +258,19 @@ public class AudioListActivity extends AppCompatActivity
             }
             public void afterTextChanged(Editable s) {}
         });
-        btnAudioSearchClear.setOnClickListener(v -> etAudioSearch.setText(""));
+        etAudioSearch.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                hideKeyboard();
+                etAudioSearch.clearFocus();
+                return true;
+            }
+            return false;
+        });
+        btnAudioSearchClear.setOnClickListener(v -> {
+            etAudioSearch.setText("");
+            etAudioSearch.clearFocus();
+            hideKeyboard();
+        });
 
         btnClearRecent.setOnClickListener(v -> Helper.showConfirm(
                 this, "Clear Recent", "Remove all recently played audio from the Recent list?",
@@ -210,7 +280,6 @@ public class AudioListActivity extends AppCompatActivity
                     Toast.makeText(this, "Recent cleared", Toast.LENGTH_SHORT).show();
                 }
         ));
-
         btnNewPlaylist.setOnClickListener(v -> showCreatePlaylistDialog(null));
 
         setupMiniPlayer();
@@ -226,6 +295,9 @@ public class AudioListActivity extends AppCompatActivity
     private void setFilter(int filter) {
         currentFilter = filter;
         selectedPlaylist = null;
+        selectedSubCollection = null;
+        // Favourites / Archived open on their collection list first (same as Library)
+        showSubCollectionList = (filter == FILTER_FAV || filter == FILTER_ARCHIVE);
         updateFilterIcons();
         refreshDisplayedList();
     }
@@ -236,6 +308,7 @@ public class AudioListActivity extends AppCompatActivity
         styleFilterIcon(filterDownload, currentFilter == FILTER_DOWNLOADS, false, R.drawable.ic_download);
         styleFilterIcon(filterRecent, currentFilter == FILTER_RECENT, false, R.drawable.ic_history);
         styleFilterIcon(filterPlaylist, currentFilter == FILTER_PLAYLISTS, false, R.drawable.ic_playlist);
+        styleFilterIcon(filterArchive, currentFilter == FILTER_ARCHIVE, false, R.drawable.ic_archive);
     }
 
     private void styleFilterIcon(TextView v, boolean selected, boolean isFav, int defaultIcon) {
@@ -246,6 +319,65 @@ public class AudioListActivity extends AppCompatActivity
         v.setCompoundDrawableTintList(ColorStateList.valueOf(color));
         v.setTextColor(color);
     }
+
+    // ═══════════════════════════════════════════════════════════
+    // SEARCH TOGGLE (same logic as Library)
+    // ═══════════════════════════════════════════════════════════
+
+    private void toggleSearch() {
+        if (searchOpen) closeSearch();
+        else openSearch();
+    }
+
+    private void openSearch() {
+        searchOpen = true;
+        audioTitleGroup.animate()
+                .translationX(-audioTitleGroup.getWidth())
+                .alpha(0f)
+                .setDuration(200)
+                .withEndAction(() -> audioTitleGroup.setVisibility(View.INVISIBLE))
+                .start();
+        audioSearchInline.setVisibility(View.VISIBLE);
+        audioSearchInline.animate()
+                .translationX(0)
+                .alpha(1f)
+                .setDuration(200)
+                .start();
+        etAudioSearch.requestFocus();
+        etAudioSearch.post(() -> {
+            InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+            if (imm != null) imm.showSoftInput(etAudioSearch, InputMethodManager.SHOW_IMPLICIT);
+        });
+    }
+
+    private void closeSearch() {
+        searchOpen = false;
+        etAudioSearch.setText("");
+        etAudioSearch.clearFocus();
+        hideKeyboard();
+        audioSearchInline.animate()
+                .translationX(200)
+                .alpha(0f)
+                .setDuration(200)
+                .withEndAction(() -> audioSearchInline.setVisibility(View.INVISIBLE))
+                .start();
+        audioTitleGroup.setVisibility(View.VISIBLE);
+        audioTitleGroup.animate()
+                .translationX(0)
+                .alpha(1f)
+                .setDuration(200)
+                .start();
+        refreshDisplayedList();
+    }
+
+    private void hideKeyboard() {
+        InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        if (imm != null) imm.hideSoftInputFromWindow(etAudioSearch.getWindowToken(), 0);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // DATA LOADING
+    // ═══════════════════════════════════════════════════════════
 
     private void loadAudios(boolean showSpinner) {
         if (showSpinner) swipeRefresh.setRefreshing(true);
@@ -259,12 +391,14 @@ public class AudioListActivity extends AppCompatActivity
                     refreshDisplayedList();
                 });
             }
+
             @Override
             public void onError(String message) {
                 runOnUiThread(() -> {
                     if (showSpinner) Toast.makeText(AudioListActivity.this, message, Toast.LENGTH_SHORT).show();
                 });
             }
+
             @Override
             public void onComplete() {
                 runOnUiThread(() -> {
@@ -288,7 +422,9 @@ public class AudioListActivity extends AppCompatActivity
                     if (fromNetwork) Toast.makeText(AudioListActivity.this, "Audio list updated", Toast.LENGTH_SHORT).show();
                 });
             }
+
             @Override public void onError(String message) {}
+
             @Override
             public void onComplete() {
                 runOnUiThread(() -> {
@@ -311,6 +447,7 @@ public class AudioListActivity extends AppCompatActivity
                     }, 1000);
                 }
             }
+
             @Override
             public void onLost(@NonNull Network network) { wasOffline = true; }
         };
@@ -322,21 +459,60 @@ public class AudioListActivity extends AppCompatActivity
         wasOffline = !AudioRepository.isNetworkAvailable(this);
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // REFRESH (views, collections, filters, search)
+    // ═══════════════════════════════════════════════════════════
+
     private void refreshDisplayedList() {
+        updateActiveViewLabel();
+        updateFabVisibility();
+
+        // ── Collection list layers ──
         if (currentFilter == FILTER_PLAYLISTS && selectedPlaylist == null) {
             if (recyclerView.getAdapter() != playlistAdapter) recyclerView.setAdapter(playlistAdapter);
             refreshPlaylists();
             updateBottomBar();
             return;
         }
+        if ((currentFilter == FILTER_FAV || currentFilter == FILTER_ARCHIVE) && showSubCollectionList) {
+            showAudioCollectionList(currentFilter == FILTER_FAV);
+            updateBottomBar();
+            return;
+        }
 
         if (recyclerView.getAdapter() != audioAdapter) recyclerView.setAdapter(audioAdapter);
-
         displayedTracks.clear();
+
+        boolean searching = !audioQuery.isEmpty();
+        boolean includeArchived = Helper.isAudioArchivedInListEnabled(this)
+                || (searching && Helper.isAudioArchivedSearchable(this));
         int recentLimit = Helper.getAudioRecentLimit(this);
 
-        if (currentFilter == FILTER_FAV) {
-            for (AudioTrack t : allTracks) if (t.isFavourite) displayedTracks.add(t);
+        // ── Build base list by view ──
+        if (currentFilter == FILTER_ARCHIVE) {
+            if (selectedSubCollection == null) {
+                for (AudioTrack t : allTracks) if (Helper.isAudioArchived(this, t.id)) displayedTracks.add(t);
+            } else {
+                List<String> ids = Helper.getAudioArchiveCategories(this).get(selectedSubCollection);
+                if (ids == null) { selectedSubCollection = null; showSubCollectionList = true; refreshDisplayedList(); return; }
+                for (String id : ids) {
+                    for (AudioTrack t : allTracks) {
+                        if (t.id.equals(id) && Helper.isAudioArchived(this, t.id)) { displayedTracks.add(t); break; }
+                    }
+                }
+            }
+        } else if (currentFilter == FILTER_FAV) {
+            if (selectedSubCollection == null) {
+                for (AudioTrack t : allTracks) if (t.isFavourite) displayedTracks.add(t);
+            } else {
+                List<String> ids = Helper.getAudioFavCategories(this).get(selectedSubCollection);
+                if (ids == null) { selectedSubCollection = null; showSubCollectionList = true; refreshDisplayedList(); return; }
+                for (String id : ids) {
+                    for (AudioTrack t : allTracks) {
+                        if (t.id.equals(id) && t.isFavourite) { displayedTracks.add(t); break; }
+                    }
+                }
+            }
         } else if (currentFilter == FILTER_DOWNLOADS) {
             for (AudioTrack t : allTracks) if (t.isDownloaded) displayedTracks.add(t);
         } else if (currentFilter == FILTER_RECENT) {
@@ -360,7 +536,17 @@ public class AudioListActivity extends AppCompatActivity
             displayedTracks.addAll(allTracks);
         }
 
-        if (!audioQuery.isEmpty()) {
+        // Archived tracks are hidden from the All view unless allowed (same rule as Library)
+        if (currentFilter == FILTER_ALL && !includeArchived) {
+            java.util.Iterator<AudioTrack> it = displayedTracks.iterator();
+            while (it.hasNext()) {
+                AudioTrack t = it.next();
+                if (Helper.isAudioArchived(this, t.id)) it.remove();
+            }
+        }
+
+        // Search filter
+        if (searching) {
             java.util.Iterator<AudioTrack> it = displayedTracks.iterator();
             while (it.hasNext()) {
                 AudioTrack t = it.next();
@@ -370,6 +556,39 @@ public class AudioListActivity extends AppCompatActivity
 
         audioAdapter.notifyDataSetChanged();
         updateBottomBar();
+    }
+
+    /** Favourite / Archive collection list ("All Favourites" / "All Archived" pinned row). */
+    private void showAudioCollectionList(boolean fav) {
+        if (recyclerView.getAdapter() != audioCategoryAdapter) recyclerView.setAdapter(audioCategoryAdapter);
+
+        Map<String, List<String>> map = fav
+                ? Helper.getAudioFavCategories(this)
+                : Helper.getAudioArchiveCategories(this);
+        String allName = fav ? "All Favourites" : "All Archived";
+        int allCount = 0;
+        for (AudioTrack t : allTracks) {
+            if (fav ? t.isFavourite : Helper.isAudioArchived(this, t.id)) allCount++;
+        }
+        audioCategoryAdapter.setAllItem(allName, allCount);
+
+        List<String> names = new ArrayList<>(map.keySet());
+        Map<String, Integer> counts = new HashMap<>();
+        for (String n : names) {
+            List<String> ids = map.get(n);
+            int c = 0;
+            for (String id : ids) {
+                if (fav) {
+                    for (AudioTrack t : allTracks) {
+                        if (t.id.equals(id) && t.isFavourite) { c++; break; }
+                    }
+                } else {
+                    if (Helper.isAudioArchived(this, id)) c++;
+                }
+            }
+            counts.put(n, c);
+        }
+        audioCategoryAdapter.update(names, counts);
     }
 
     private void refreshPlaylists() {
@@ -384,9 +603,11 @@ public class AudioListActivity extends AppCompatActivity
         boolean recentView = currentFilter == FILTER_RECENT;
         boolean playlistView = currentFilter == FILTER_PLAYLISTS && selectedPlaylist == null;
         boolean downloadView = currentFilter == FILTER_DOWNLOADS;
-        boolean show = recentView || playlistView || downloadView;
-        bottomBar.setVisibility(show ? View.VISIBLE : View.GONE);
+        boolean favTrackView = currentFilter == FILTER_FAV && !showSubCollectionList;
+        boolean archiveTrackView = currentFilter == FILTER_ARCHIVE && !showSubCollectionList;
+        boolean show = recentView || playlistView || downloadView || favTrackView || archiveTrackView;
 
+        bottomBar.setVisibility(show ? View.VISIBLE : View.GONE);
         if (show) {
             if (playlistView) {
                 int count = Helper.getPlaylists(this).size();
@@ -395,11 +616,140 @@ public class AudioListActivity extends AppCompatActivity
                 tvAudioCount.setText(displayedTracks.size() + (displayedTracks.size() == 1 ? " track" : " tracks"));
             }
         }
-
         btnClearRecent.setVisibility(recentView ? View.VISIBLE : View.GONE);
         btnNewPlaylist.setVisibility(playlistView ? View.VISIBLE : View.GONE);
         updateMiniMargin();
+        updateFabMargin(show);
     }
+
+    private void updateActiveViewLabel() {
+        String label;
+        if (currentFilter == FILTER_FAV) label = "Favourites";
+        else if (currentFilter == FILTER_DOWNLOADS) label = "Downloads";
+        else if (currentFilter == FILTER_RECENT) label = "Recent";
+        else if (currentFilter == FILTER_PLAYLISTS) label = selectedPlaylist != null ? selectedPlaylist : "Playlists";
+        else if (currentFilter == FILTER_ARCHIVE) label = "Archived";
+        else label = "All";
+        if (selectedSubCollection != null) label = selectedSubCollection;
+        tvAudioActiveView.setText(label);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // FAB (new playlist / favourite collection / archive collection)
+    // ═══════════════════════════════════════════════════════════
+
+    private void updateFabVisibility() {
+        boolean show = (currentFilter == FILTER_PLAYLISTS && selectedPlaylist == null)
+                || (currentFilter == FILTER_FAV && showSubCollectionList)
+                || (currentFilter == FILTER_ARCHIVE && showSubCollectionList);
+        fabAdd.setVisibility(show ? View.VISIBLE : View.GONE);
+    }
+
+    private void updateFabMargin(boolean barVisible) {
+        if (fabAdd == null) return;
+        float density = getResources().getDisplayMetrics().density;
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) fabAdd.getLayoutParams();
+        lp.bottomMargin = (int) (((barVisible ? 80 + 56 : 80) + 16) * density);
+        fabAdd.setLayoutParams(lp);
+    }
+
+    private void handleFabClick() {
+        if (currentFilter == FILTER_FAV) showCreateAudioCollectionDialog(null, true);
+        else if (currentFilter == FILTER_ARCHIVE) showCreateAudioCollectionDialog(null, false);
+        else showCreatePlaylistDialog(null);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // OVERFLOW MENU (same structure as the Library overflow)
+    // ═══════════════════════════════════════════════════════════
+
+    private void showOverflowMenu() {
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        View v = LayoutInflater.from(this).inflate(R.layout.dialog_audio_overflow, null);
+
+        int allCount = allTracks.size();
+        int favCount = 0, dlCount = 0;
+        for (AudioTrack t : allTracks) {
+            if (t.isFavourite) favCount++;
+            if (t.isDownloaded) dlCount++;
+        }
+        int recentCount = Math.min(Helper.getAudioRecentIds(this).size(), Helper.getAudioRecentLimit(this));
+        int playlistsCount = Helper.getPlaylists(this).size();
+        int archivedCount = Helper.audioArchivedCount(this);
+
+        ((TextView) v.findViewById(R.id.count_a_all)).setText(allCount + "");
+        ((TextView) v.findViewById(R.id.count_a_fav)).setText(favCount + "");
+        ((TextView) v.findViewById(R.id.count_a_download)).setText(dlCount + "");
+        ((TextView) v.findViewById(R.id.count_a_recent)).setText(recentCount + "");
+        ((TextView) v.findViewById(R.id.count_a_playlist)).setText(playlistsCount + "");
+        ((TextView) v.findViewById(R.id.count_a_archived)).setText(archivedCount + "");
+
+        v.findViewById(R.id.check_a_all).setVisibility(currentFilter == FILTER_ALL ? View.VISIBLE : View.GONE);
+        v.findViewById(R.id.check_a_fav).setVisibility(currentFilter == FILTER_FAV ? View.VISIBLE : View.GONE);
+        v.findViewById(R.id.check_a_download).setVisibility(currentFilter == FILTER_DOWNLOADS ? View.VISIBLE : View.GONE);
+        v.findViewById(R.id.check_a_recent).setVisibility(currentFilter == FILTER_RECENT ? View.VISIBLE : View.GONE);
+        v.findViewById(R.id.check_a_playlist).setVisibility(currentFilter == FILTER_PLAYLISTS ? View.VISIBLE : View.GONE);
+        v.findViewById(R.id.check_a_archived).setVisibility(currentFilter == FILTER_ARCHIVE ? View.VISIBLE : View.GONE);
+
+        v.findViewById(R.id.menu_a_all).setOnClickListener(x -> { dialog.dismiss(); setFilter(FILTER_ALL); });
+        v.findViewById(R.id.menu_a_fav).setOnClickListener(x -> { dialog.dismiss(); setFilter(FILTER_FAV); });
+        v.findViewById(R.id.menu_a_download).setOnClickListener(x -> { dialog.dismiss(); setFilter(FILTER_DOWNLOADS); });
+        v.findViewById(R.id.menu_a_recent).setOnClickListener(x -> { dialog.dismiss(); setFilter(FILTER_RECENT); });
+        v.findViewById(R.id.menu_a_playlist).setOnClickListener(x -> { dialog.dismiss(); setFilter(FILTER_PLAYLISTS); });
+        v.findViewById(R.id.menu_a_archived).setOnClickListener(x -> { dialog.dismiss(); setFilter(FILTER_ARCHIVE); });
+
+        View manageToggle = v.findViewById(R.id.menu_a_manage_toggle);
+        View manageOptions = v.findViewById(R.id.manage_options_container);
+        TextView manageLabel = v.findViewById(R.id.tv_manage_label);
+        ImageView manageChevron = v.findViewById(R.id.iv_manage_chevron);
+        manageToggle.setOnClickListener(x -> {
+            boolean isVisible = manageOptions.getVisibility() == View.VISIBLE;
+            if (isVisible) {
+                manageOptions.setVisibility(View.GONE);
+                manageLabel.setText("Cleanup Tools");
+                manageChevron.setRotation(0f);
+            } else {
+                manageOptions.setVisibility(View.VISIBLE);
+                manageLabel.setText("Hide Options");
+                manageChevron.setRotation(90f);
+            }
+        });
+
+        v.findViewById(R.id.menu_a_clear_recent).setOnClickListener(x -> {
+            dialog.dismiss();
+            Helper.showConfirm(this, "Clear listening history", "Remove all recently played tracks?", "Clear", true, () -> {
+                Helper.clearAudioRecents(this);
+                refreshDisplayedList();
+                Toast.makeText(this, "Listening history cleared", Toast.LENGTH_SHORT).show();
+            });
+        });
+        v.findViewById(R.id.menu_a_clear_favs).setOnClickListener(x -> {
+            dialog.dismiss();
+            Helper.showConfirm(this, "Clear favourites", "Remove all tracks from your favourite list?", "Clear", true, () -> {
+                for (AudioTrack t : allTracks) t.isFavourite = false;
+                AudioDatabase.getInstance(this).clearAllFavourites();
+                Helper.clearAudioFavCategoryContents(this);
+                refreshDisplayedList();
+                Toast.makeText(this, "Favourites cleared", Toast.LENGTH_SHORT).show();
+            });
+        });
+        v.findViewById(R.id.menu_a_unarchive_all).setOnClickListener(x -> {
+            dialog.dismiss();
+            Helper.showConfirm(this, "Unarchive all", "Restore all archived tracks?", "Restore", true, () -> {
+                Helper.clearAudioArchived(this);
+                refreshDisplayedList();
+                Toast.makeText(this, "All tracks unarchived", Toast.LENGTH_SHORT).show();
+            });
+        });
+
+        v.findViewById(R.id.btn_close).setOnClickListener(x -> dialog.dismiss());
+        dialog.setContentView(v);
+        dialog.show();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // MINI PLAYER
+    // ═══════════════════════════════════════════════════════════
 
     private void setupMiniPlayer() {
         miniPlayer = findViewById(R.id.mini_player);
@@ -442,7 +792,6 @@ public class AudioListActivity extends AppCompatActivity
             }
             return true;
         });
-
         miniPlay.setOnClickListener(v -> PlaybackManager.getInstance().playPause());
         miniPrev.setOnClickListener(v -> PlaybackManager.getInstance().prev());
         miniNext.setOnClickListener(v -> PlaybackManager.getInstance().next());
@@ -491,6 +840,10 @@ public class AudioListActivity extends AppCompatActivity
         startActivity(new Intent(this, MusicPlayerActivity.class));
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // TRACK OPTIONS (long press) — same shape as Library options
+    // ═══════════════════════════════════════════════════════════
+
     private void showTrackOptions(AudioTrack track) {
         if (track == null) return;
         PlaybackManager pm = PlaybackManager.getInstance();
@@ -505,8 +858,10 @@ public class AudioListActivity extends AppCompatActivity
         TextView sheetStatus = v.findViewById(R.id.sheet_status);
         TextView sheetPlay = v.findViewById(R.id.sheet_play);
         TextView sheetFav = v.findViewById(R.id.sheet_fav);
+        TextView sheetArchive = v.findViewById(R.id.sheet_archive);
         TextView sheetPlaylist = v.findViewById(R.id.sheet_playlist);
         TextView sheetDownload = v.findViewById(R.id.sheet_download);
+        TextView sheetRemoveRecent = v.findViewById(R.id.sheet_remove_recent);
         TextView sheetRemovePlaylist = v.findViewById(R.id.sheet_remove_playlist);
         View sheetClose = v.findViewById(R.id.sheet_close);
 
@@ -535,6 +890,7 @@ public class AudioListActivity extends AppCompatActivity
             }
         });
 
+        // ── Favourites: Add = pick collection, Remove = confirmation ──
         if (track.isFavourite) {
             sheetFav.setText("Remove from Favourites");
             sheetFav.setTextColor(getColor(R.color.accent));
@@ -542,7 +898,32 @@ public class AudioListActivity extends AppCompatActivity
             sheetFav.setText("Add to Favourites");
             sheetFav.setTextColor(getColor(R.color.text_primary));
         }
-        sheetFav.setOnClickListener(x -> { dialog.dismiss(); toggleFavourite(track); });
+        sheetFav.setOnClickListener(x -> {
+            dialog.dismiss();
+            if (track.isFavourite) confirmRemoveFavourite(track);
+            else showAddToAudioFavCollectionDialog(track);
+        });
+
+        // ── Archive / Unarchive ──
+        boolean archived = Helper.isAudioArchived(this, track.id);
+        if (archived) {
+            sheetArchive.setText("Unarchive");
+            sheetArchive.setOnClickListener(x -> {
+                dialog.dismiss();
+                Helper.showConfirm(this, "Unarchive track",
+                        "Restore \u201C" + track.title + "\u201D back to the main list?",
+                        "Unarchive", false, () -> {
+                            Helper.unAudioArchive(this, track.id);
+                            Toast.makeText(this, "Track unarchived", Toast.LENGTH_SHORT).show();
+                            if (currentFilter == FILTER_ARCHIVE && !showSubCollectionList) removeTrackAnimated(track);
+                            else refreshDisplayedList();
+                        });
+            });
+        } else {
+            sheetArchive.setText("Archive");
+            sheetArchive.setOnClickListener(x -> { dialog.dismiss(); showAddToAudioArchiveCollectionDialog(track); });
+        }
+
         sheetPlaylist.setOnClickListener(x -> { dialog.dismiss(); showAddToPlaylistDialog(track); });
 
         if (track.isDownloaded) {
@@ -557,13 +938,25 @@ public class AudioListActivity extends AppCompatActivity
         }
         sheetDownload.setOnClickListener(x -> { dialog.dismiss(); handleDownloadAction(track); });
 
+        // ── Remove from Recent (same as Library) ──
+        if (Helper.getAudioRecentIds(this).contains(track.id)) {
+            sheetRemoveRecent.setVisibility(View.VISIBLE);
+            sheetRemoveRecent.setOnClickListener(x -> {
+                dialog.dismiss();
+                Helper.removeAudioRecent(this, track.id);
+                Toast.makeText(this, "Removed from recent", Toast.LENGTH_SHORT).show();
+                if (currentFilter == FILTER_RECENT) removeTrackAnimated(track);
+                else refreshDisplayedList();
+            });
+        }
+
         if (selectedPlaylist != null) {
             sheetRemovePlaylist.setVisibility(View.VISIBLE);
             sheetRemovePlaylist.setOnClickListener(x -> {
                 dialog.dismiss();
                 Helper.removeFromPlaylist(this, selectedPlaylist, track.id);
-                refreshDisplayedList();
                 Toast.makeText(this, "Removed from playlist", Toast.LENGTH_SHORT).show();
+                removeTrackAnimated(track);
             });
         }
 
@@ -572,20 +965,28 @@ public class AudioListActivity extends AppCompatActivity
         dialog.show();
     }
 
-    private void toggleFavourite(AudioTrack track) {
-        if (track.isFavourite) {
-            Helper.showConfirm(this, "Remove from Favourites", "Remove \"" + track.title + "\" from favourites?", "Remove", true, () -> {
-                track.isFavourite = false;
-                AudioDatabase.getInstance(this).toggleFavourite(track.id);
-                refreshDisplayedList();
-                Toast.makeText(this, "Removed from favourites", Toast.LENGTH_SHORT).show();
-            });
+    /** Slides a row away with the RecyclerView removal animation when it leaves the current view. */
+    private void removeTrackAnimated(AudioTrack track) {
+        int pos = audioAdapter.positionOf(track);
+        if (pos >= 0) {
+            audioAdapter.removeItemAt(pos);
+            updateBottomBar();
         } else {
-            track.isFavourite = true;
-            AudioDatabase.getInstance(this).toggleFavourite(track.id);
             refreshDisplayedList();
-            Toast.makeText(this, "Added to favourites", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void confirmRemoveFavourite(AudioTrack track) {
+        Helper.showConfirm(this, "Remove from Favourites",
+                "Remove \u201C" + track.title + "\u201D from your favourite list?",
+                "Remove", true, () -> {
+                    track.isFavourite = false;
+                    AudioDatabase.getInstance(this).setFavourite(track.id, false);
+                    Helper.removeAudioFavFromAllCategories(this, track.id);
+                    Toast.makeText(this, "Removed from favourites", Toast.LENGTH_SHORT).show();
+                    if (currentFilter == FILTER_FAV && !showSubCollectionList) removeTrackAnimated(track);
+                    else refreshDisplayedList();
+                });
     }
 
     private void handleDownloadAction(AudioTrack track) {
@@ -612,6 +1013,10 @@ public class AudioListActivity extends AppCompatActivity
             Toast.makeText(this, "Downloading\u2026", Toast.LENGTH_SHORT).show();
         }
     }
+
+    // ═══════════════════════════════════════════════════════════
+    // PLAYLIST + COLLECTION DIALOGS
+    // ═══════════════════════════════════════════════════════════
 
     private void showCreatePlaylistDialog(AudioTrack trackToAdd) {
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_playlist_name, null);
@@ -657,6 +1062,102 @@ public class AudioListActivity extends AppCompatActivity
                 .show();
     }
 
+    /** Create a favourite (fav == true) or archive (fav == false) collection. */
+    private void showCreateAudioCollectionDialog(AudioTrack trackToAdd, boolean fav) {
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_category_name, null);
+        EditText etName = view.findViewById(R.id.et_category_name);
+        TextView tvDialogTitle = view.findViewById(R.id.tv_dialog_title);
+        String title = fav ? "New Favourite Collection" : "New Archive Collection";
+        tvDialogTitle.setText(title);
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setView(view)
+                .setPositiveButton("Create", (dialog, which) -> {
+                    String name = Helper.sanitizeCategoryName(etName.getText().toString());
+                    if (name.isEmpty()) {
+                        Toast.makeText(this, "Name cannot be empty", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    if (fav) {
+                        Helper.createAudioFavCategory(this, name);
+                        if (trackToAdd != null) {
+                            Helper.addToAudioFavCategory(this, name, trackToAdd.id);
+                            trackToAdd.isFavourite = true;
+                            Toast.makeText(this, "Added to favourites \u00B7 \u201C" + name + "\u201D", Toast.LENGTH_SHORT).show();
+                        } else Toast.makeText(this, "Collection created", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Helper.createAudioArchiveCategory(this, name);
+                        if (trackToAdd != null) {
+                            Helper.addToAudioArchiveCategory(this, name, trackToAdd.id);
+                            Toast.makeText(this, "Archived \u00B7 \u201C" + name + "\u201D", Toast.LENGTH_SHORT).show();
+                        } else Toast.makeText(this, "Collection created", Toast.LENGTH_SHORT).show();
+                    }
+                    refreshDisplayedList();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showAddToAudioFavCollectionDialog(AudioTrack track) {
+        if (track == null) return;
+        Map<String, List<String>> favCats = Helper.getAudioFavCategories(this);
+        List<String> names = new ArrayList<>();
+        names.add("All Favourites (default)");
+        names.addAll(favCats.keySet());
+        names.add("+ Create new collection");
+        new AlertDialog.Builder(this)
+                .setTitle("Add to Favourites")
+                .setItems(names.toArray(new String[0]), (dialog, which) -> {
+                    if (which == 0) {
+                        if (!track.isFavourite) {
+                            track.isFavourite = true;
+                            AudioDatabase.getInstance(this).setFavourite(track.id, true);
+                        }
+                        Toast.makeText(this, "Added to favourites", Toast.LENGTH_SHORT).show();
+                        refreshDisplayedList();
+                    } else if (which == names.size() - 1) {
+                        showCreateAudioCollectionDialog(track, true);
+                    } else {
+                        Helper.addToAudioFavCategory(this, names.get(which), track.id);
+                        track.isFavourite = true;
+                        Toast.makeText(this, "Added to favourites \u00B7 \u201C" + names.get(which) + "\u201D",
+                                Toast.LENGTH_SHORT).show();
+                        refreshDisplayedList();
+                    }
+                })
+                .show();
+    }
+
+    private void showAddToAudioArchiveCollectionDialog(AudioTrack track) {
+        if (track == null) return;
+        Map<String, List<String>> archiveCats = Helper.getAudioArchiveCategories(this);
+        List<String> names = new ArrayList<>();
+        names.add("All Archived (default)");
+        names.addAll(archiveCats.keySet());
+        names.add("+ Create new collection");
+        new AlertDialog.Builder(this)
+                .setTitle("Archive Track")
+                .setItems(names.toArray(new String[0]), (dialog, which) -> {
+                    if (which == 0) {
+                        Helper.ensureAudioArchived(this, track.id);
+                        Toast.makeText(this, "Track archived", Toast.LENGTH_SHORT).show();
+                        refreshDisplayedList();
+                    } else if (which == names.size() - 1) {
+                        showCreateAudioCollectionDialog(track, false);
+                    } else {
+                        Helper.addToAudioArchiveCategory(this, names.get(which), track.id);
+                        Toast.makeText(this, "Archived \u00B7 \u201C" + names.get(which) + "\u201D",
+                                Toast.LENGTH_SHORT).show();
+                        refreshDisplayedList();
+                    }
+                })
+                .show();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // ADAPTER CALLBACKS
+    // ═══════════════════════════════════════════════════════════
+
     @Override
     public void onPlaylistClick(String name) { selectedPlaylist = name; refreshDisplayedList(); }
 
@@ -689,6 +1190,10 @@ public class AudioListActivity extends AppCompatActivity
 
     @Override
     public void onOptionsClick(AudioTrack track, int position) { showTrackOptions(track); }
+
+    // ═══════════════════════════════════════════════════════════
+    // SHEET BLUR
+    // ═══════════════════════════════════════════════════════════
 
     private void applySheetBlur(float p) {
         p = Math.max(0f, Math.min(1f, p));
@@ -724,6 +1229,10 @@ public class AudioListActivity extends AppCompatActivity
             }
         }
     }
+
+    // ═══════════════════════════════════════════════════════════
+    // LIFECYCLE
+    // ═══════════════════════════════════════════════════════════
 
     @Override
     protected void onStart() {
@@ -764,6 +1273,7 @@ public class AudioListActivity extends AppCompatActivity
 
     @Override
     public void onBackPressed() {
+        if (searchOpen) { closeSearch(); return; }
         if (selectedPlaylist != null) {
             selectedPlaylist = null;
             currentFilter = FILTER_PLAYLISTS;
@@ -771,10 +1281,14 @@ public class AudioListActivity extends AppCompatActivity
             refreshDisplayedList();
             return;
         }
-        if (currentFilter != FILTER_ALL) {
-            currentFilter = FILTER_ALL;
-            updateFilterIcons();
+        if ((currentFilter == FILTER_FAV || currentFilter == FILTER_ARCHIVE) && !showSubCollectionList) {
+            showSubCollectionList = true;
+            selectedSubCollection = null;
             refreshDisplayedList();
+            return;
+        }
+        if (currentFilter != FILTER_ALL) {
+            setFilter(FILTER_ALL);
             return;
         }
         super.onBackPressed();

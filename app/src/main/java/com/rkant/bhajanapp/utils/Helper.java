@@ -1,3 +1,4 @@
+
 package com.rkant.bhajanapp.utils;
 
 import android.content.Context;
@@ -50,6 +51,7 @@ public class Helper {
     public static int getThemeMode(Context ctx) {
         return ctx.getSharedPreferences(PREF_SETTINGS, Context.MODE_PRIVATE).getInt("theme_mode", 1);
     }
+
     public static void setThemeMode(Context ctx, int mode) {
         ctx.getSharedPreferences(PREF_SETTINGS, Context.MODE_PRIVATE).edit().putInt("theme_mode", mode).apply();
     }
@@ -119,15 +121,18 @@ public class Helper {
         ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit().remove("archived").apply();
         clearAllSubCategoryContents(ctx, PREF_ARCHIVE_CATEGORIES);
     }
+
     private static Set<String> getArchivedSet(Context ctx) {
         return new HashSet<>(ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE)
                 .getStringSet("archived", new HashSet<>()));
     }
 
     public static int archivedCount(Context ctx) { return getArchivedSet(ctx).size(); }
+
     // ═══════════════════════════════════════════════════════════
     // SHOW ARCHIVED IN LIST SETTING (default OFF)
     // ═══════════════════════════════════════════════════════════
+
     public static boolean isArchivedInListEnabled(Context ctx) {
         return ctx.getSharedPreferences(PREF_SETTINGS, Context.MODE_PRIVATE)
                 .getBoolean("archived_in_list", false);
@@ -150,6 +155,80 @@ public class Helper {
     public static void setArchivedSearchable(Context ctx, boolean value) {
         ctx.getSharedPreferences(PREF_SETTINGS, Context.MODE_PRIVATE)
                 .edit().putBoolean("archived_searchable", value).apply();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // AUDIO ARCHIVED TRACKS (mirrors the bhajan archive logic)
+    // ═══════════════════════════════════════════════════════════
+
+    public static void toggleAudioArchive(Context ctx, String id) {
+        if (id == null) return;
+        Set<String> set = new HashSet<>(getAudioArchivedSet(ctx));
+        boolean removing = set.contains(id);
+        if (removing) set.remove(id);
+        else set.add(id);
+        ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit().putStringSet("audio_archived", set).apply();
+        // Sync: unarchiving also removes it from every audio archive sub-category
+        if (removing) removeIdFromAllSubCategories(ctx, PREF_AUDIO_ARCHIVE_CATEGORIES, "audio_archive_category_order", id);
+    }
+
+    public static boolean isAudioArchived(Context ctx, String id) {
+        if (id == null) return false;
+        return getAudioArchivedSet(ctx).contains(id);
+    }
+
+    public static void unAudioArchive(Context ctx, String id) {
+        if (id == null) return;
+        Set<String> set = new HashSet<>(getAudioArchivedSet(ctx));
+        set.remove(id);
+        ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit().putStringSet("audio_archived", set).apply();
+        // Sync: unarchiving also removes it from every audio archive sub-category
+        removeIdFromAllSubCategories(ctx, PREF_AUDIO_ARCHIVE_CATEGORIES, "audio_archive_category_order", id);
+    }
+
+    public static void ensureAudioArchived(Context ctx, String id) {
+        if (id == null) return;
+        Set<String> set = new HashSet<>(getAudioArchivedSet(ctx));
+        if (!set.contains(id)) {
+            set.add(id);
+            ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit().putStringSet("audio_archived", set).apply();
+        }
+    }
+
+    public static void clearAudioArchived(Context ctx) {
+        ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit().remove("audio_archived").apply();
+        clearAllSubCategoryContents(ctx, PREF_AUDIO_ARCHIVE_CATEGORIES);
+    }
+
+    private static Set<String> getAudioArchivedSet(Context ctx) {
+        return new HashSet<>(ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE)
+                .getStringSet("audio_archived", new HashSet<>()));
+    }
+
+    public static int audioArchivedCount(Context ctx) { return getAudioArchivedSet(ctx).size(); }
+
+    // ═══════════════════════════════════════════════════════════
+    // AUDIO ARCHIVE SETTINGS (mirror the bhajan archive settings)
+    // ═══════════════════════════════════════════════════════════
+
+    public static boolean isAudioArchivedInListEnabled(Context ctx) {
+        return ctx.getSharedPreferences(PREF_SETTINGS, Context.MODE_PRIVATE)
+                .getBoolean("audio_archived_in_list", false);
+    }
+
+    public static void setAudioArchivedInListEnabled(Context ctx, boolean value) {
+        ctx.getSharedPreferences(PREF_SETTINGS, Context.MODE_PRIVATE)
+                .edit().putBoolean("audio_archived_in_list", value).apply();
+    }
+
+    public static boolean isAudioArchivedSearchable(Context ctx) {
+        return ctx.getSharedPreferences(PREF_SETTINGS, Context.MODE_PRIVATE)
+                .getBoolean("audio_archived_searchable", false);
+    }
+
+    public static void setAudioArchivedSearchable(Context ctx, boolean value) {
+        ctx.getSharedPreferences(PREF_SETTINGS, Context.MODE_PRIVATE)
+                .edit().putBoolean("audio_archived_searchable", value).apply();
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -303,16 +382,6 @@ public class Helper {
     }
 
     // ═══════════════════════════════════════════════════════════
-    // BHAJAN FAVOURITES
-    // ═══════════════════════════════════════════════════════════
-
-    private static Set<String> getFavouriteSet(Context ctx) {
-        return new HashSet<>(ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE)
-                .getStringSet("favs", new HashSet<>()));
-    }
-
-
-    // ═══════════════════════════════════════════════════════════
     // BHAJAN RECENTS
     // ═══════════════════════════════════════════════════════════
 
@@ -338,6 +407,19 @@ public class Helper {
         ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit().remove("recents").apply();
     }
 
+    public static void removeRecent(Context ctx, String id) {
+        if (id == null || id.isEmpty()) return;
+        List<String> recents = new ArrayList<>(getRecentIds(ctx));
+        if (recents.remove(id)) {
+            ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit()
+                    .putString("recents", TextUtils.join(",", recents)).apply();
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // AUDIO RECENTS
+    // ═══════════════════════════════════════════════════════════
+
     public static void addAudioRecent(Context ctx, String id) {
         if (id == null || id.isEmpty()) return;
         List<String> recents = new ArrayList<>(getAudioRecentIds(ctx));
@@ -358,6 +440,16 @@ public class Helper {
 
     public static void clearAudioRecents(Context ctx) {
         ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit().remove("audio_recents").apply();
+    }
+
+    /** Removes a single track from the audio recent list (options sheet "Remove from Recent"). */
+    public static void removeAudioRecent(Context ctx, String id) {
+        if (id == null || id.isEmpty()) return;
+        List<String> recents = new ArrayList<>(getAudioRecentIds(ctx));
+        if (recents.remove(id)) {
+            ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit()
+                    .putString("audio_recents", TextUtils.join(",", recents)).apply();
+        }
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -461,7 +553,6 @@ public class Helper {
             tvTitle.setText(title);
             tvMessage.setText(message);
             btnConfirm.setText(positiveText);
-
             AlertDialog dialog = new AlertDialog.Builder(ctx)
                     .setView(view)
                     .setCancelable(true)
@@ -480,21 +571,11 @@ public class Helper {
             if (onConfirm != null) onConfirm.run();
         }
     }
-    // ═══════════════════════════════════════════════════════════
-    // REMOVE A SINGLE BHAJAN FROM RECENT
-    // ═══════════════════════════════════════════════════════════
-    public static void removeRecent(Context ctx, String id) {
-        if (id == null || id.isEmpty()) return;
-        List<String> recents = new ArrayList<>(getRecentIds(ctx));
-        if (recents.remove(id)) {
-            ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).edit()
-                    .putString("recents", TextUtils.join(",", recents)).apply();
-        }
-    }
 
     // ═══════════════════════════════════════════════════════════
     // CUSTOM BHAJAN CATEGORIES (ditto copy of custom playlists)
     // ═══════════════════════════════════════════════════════════
+
     private static final String PREF_CATEGORIES = "bhajan_categories";
 
     public static String sanitizeCategoryName(String name) {
@@ -571,13 +652,13 @@ public class Helper {
             categoryPrefs.edit().putString(name, TextUtils.join(",", ids)).apply();
         }
     }
+
     // ═══════════════════════════════════════════════════════════
     // FAVOURITE SUB-CATEGORIES & ARCHIVE SUB-CATEGORIES
     // ═══════════════════════════════════════════════════════════
+
     private static final String PREF_FAV_CATEGORIES = "bhajan_fav_categories";
     private static final String PREF_ARCHIVE_CATEGORIES = "bhajan_archive_categories";
-
-
 
     public static void ensureArchived(Context ctx, String id) {
         if (id == null) return;
@@ -589,6 +670,7 @@ public class Helper {
     }
 
     // ── generic core ──
+
     private static List<String> getSubCategoryOrder(Context ctx, String orderKey) {
         String stored = ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE).getString(orderKey, "");
         List<String> result = new ArrayList<>();
@@ -677,6 +759,7 @@ public class Helper {
     }
 
     // ── favourite sub-categories (public) ──
+
     public static Map<String, List<String>> getFavCategories(Context ctx) {
         return getSubCategories(ctx, PREF_FAV_CATEGORIES, "fav_category_order");
     }
@@ -699,6 +782,7 @@ public class Helper {
     }
 
     // ── archive sub-categories (public) ──
+
     public static Map<String, List<String>> getArchiveCategories(Context ctx) {
         return getSubCategories(ctx, PREF_ARCHIVE_CATEGORIES, "archive_category_order");
     }
@@ -719,9 +803,77 @@ public class Helper {
     public static void removeFromArchiveCategory(Context ctx, String name, String id) {
         removeFromSubCategory(ctx, PREF_ARCHIVE_CATEGORIES, "archive_category_order", name, id);
     }
+
     // ═══════════════════════════════════════════════════════════
-// BHAJAN FAVOURITES (ordered — most recently added first)
-// ═══════════════════════════════════════════════════════════
+    // AUDIO FAVOURITE & ARCHIVE SUB-CATEGORIES
+    // (same structure as the bhajan ones, but the audio favourite
+    //  flag itself lives in AudioDatabase, so we sync with it)
+    // ═══════════════════════════════════════════════════════════
+
+    private static final String PREF_AUDIO_FAV_CATEGORIES = "audio_fav_categories";
+    private static final String PREF_AUDIO_ARCHIVE_CATEGORIES = "audio_archive_categories";
+
+    // ── audio favourite sub-categories ──
+
+    public static Map<String, List<String>> getAudioFavCategories(Context ctx) {
+        return getSubCategories(ctx, PREF_AUDIO_FAV_CATEGORIES, "audio_fav_category_order");
+    }
+
+    public static void createAudioFavCategory(Context ctx, String name) {
+        createSubCategory(ctx, PREF_AUDIO_FAV_CATEGORIES, "audio_fav_category_order", name);
+    }
+
+    public static void deleteAudioFavCategory(Context ctx, String name) {
+        deleteSubCategory(ctx, PREF_AUDIO_FAV_CATEGORIES, "audio_fav_category_order", name);
+    }
+
+    public static void addToAudioFavCategory(Context ctx, String name, String id) {
+        addToSubCategory(ctx, PREF_AUDIO_FAV_CATEGORIES, "audio_fav_category_order", name, id);
+        // sync: being inside an audio favourite category means it is a favourite
+        AudioDatabase.getInstance(ctx).setFavourite(id, true);
+    }
+
+    public static void removeFromAudioFavCategory(Context ctx, String name, String id) {
+        removeFromSubCategory(ctx, PREF_AUDIO_FAV_CATEGORIES, "audio_fav_category_order", name, id);
+    }
+
+    /** Called when a track stops being a favourite: drop it from every audio favourite collection. */
+    public static void removeAudioFavFromAllCategories(Context ctx, String id) {
+        removeIdFromAllSubCategories(ctx, PREF_AUDIO_FAV_CATEGORIES, "audio_fav_category_order", id);
+    }
+
+    /** Used by "Clear all favourites" in the Audio overflow menu. */
+    public static void clearAudioFavCategoryContents(Context ctx) {
+        clearAllSubCategoryContents(ctx, PREF_AUDIO_FAV_CATEGORIES);
+    }
+
+    // ── audio archive sub-categories ──
+
+    public static Map<String, List<String>> getAudioArchiveCategories(Context ctx) {
+        return getSubCategories(ctx, PREF_AUDIO_ARCHIVE_CATEGORIES, "audio_archive_category_order");
+    }
+
+    public static void createAudioArchiveCategory(Context ctx, String name) {
+        createSubCategory(ctx, PREF_AUDIO_ARCHIVE_CATEGORIES, "audio_archive_category_order", name);
+    }
+
+    public static void deleteAudioArchiveCategory(Context ctx, String name) {
+        deleteSubCategory(ctx, PREF_AUDIO_ARCHIVE_CATEGORIES, "audio_archive_category_order", name);
+    }
+
+    public static void addToAudioArchiveCategory(Context ctx, String name, String id) {
+        addToSubCategory(ctx, PREF_AUDIO_ARCHIVE_CATEGORIES, "audio_archive_category_order", name, id);
+        ensureAudioArchived(ctx, id); // sync: being inside an audio archive category means it is archived
+    }
+
+    public static void removeFromAudioArchiveCategory(Context ctx, String name, String id) {
+        removeFromSubCategory(ctx, PREF_AUDIO_ARCHIVE_CATEGORIES, "audio_archive_category_order", name, id);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // BHAJAN FAVOURITES (ordered — most recently added first)
+    // ═══════════════════════════════════════════════════════════
+
     public static List<String> getFavIds(Context ctx) {
         SharedPreferences prefs = ctx.getSharedPreferences(PREF_DATA, Context.MODE_PRIVATE);
         String stored = prefs.getString("fav_order", "");

@@ -1,10 +1,13 @@
+
 package com.rkant.bhajanapp.ui;
 
 import android.os.Bundle;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
+
 import com.rkant.bhajanapp.BuildConfig;
 import com.rkant.bhajanapp.R;
 import com.rkant.bhajanapp.utils.BottomNav;
@@ -20,6 +23,9 @@ public class SettingsActivity extends AppCompatActivity {
     private TextView tvLibraryRecentValue, tvAudioRecentValue;
     private Switch switchArchivedSearch;
     private Switch switchArchivedInList;
+    private Switch switchAudioArchivedSearch;
+    private Switch switchAudioArchivedInList;
+
     private final int[] timeoutValues = {1, 3, 5, 10, -1};
     private final int[] recentLimitOptions = {5, 10, 15, 20, 25, 30};
 
@@ -44,6 +50,8 @@ public class SettingsActivity extends AppCompatActivity {
         tvAudioRecentValue = findViewById(R.id.tv_audio_recent_value);
         switchArchivedSearch = findViewById(R.id.switch_archived_search);
         switchArchivedInList = findViewById(R.id.switch_archived_in_list);
+        switchAudioArchivedSearch = findViewById(R.id.switch_audio_archived_search);
+        switchAudioArchivedInList = findViewById(R.id.switch_audio_archived_in_list);
 
         ((TextView) findViewById(R.id.tv_version)).setText("Version " + BuildConfig.VERSION_NAME);
 
@@ -99,19 +107,37 @@ public class SettingsActivity extends AppCompatActivity {
             update();
         });
 
+        // ── Bhajan (Library) archive settings ──
         switchArchivedSearch.setChecked(Helper.isArchivedSearchable(this));
         switchArchivedSearch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             Helper.setArchivedSearchable(this, isChecked);
             Toast.makeText(this, isChecked ? "Archived bhajans will appear in search" : "Archived bhajans hidden from search",
                     Toast.LENGTH_SHORT).show();
         });
-
         switchArchivedInList.setChecked(Helper.isArchivedInListEnabled(this));
         switchArchivedInList.setOnCheckedChangeListener((buttonView, isChecked) -> {
             Helper.setArchivedInListEnabled(this, isChecked);
             Toast.makeText(this, isChecked
                             ? "Archived bhajans will stay visible in the list"
                             : "Archived bhajans will be hidden from the list",
+                    Toast.LENGTH_SHORT).show();
+        });
+
+        // ── Audio archive settings (mirror of the Library archive settings) ──
+        switchAudioArchivedInList.setChecked(Helper.isAudioArchivedInListEnabled(this));
+        switchAudioArchivedInList.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            Helper.setAudioArchivedInListEnabled(this, isChecked);
+            Toast.makeText(this, isChecked
+                            ? "Archived tracks will stay visible in the All list"
+                            : "Archived tracks will be hidden from the All list",
+                    Toast.LENGTH_SHORT).show();
+        });
+        switchAudioArchivedSearch.setChecked(Helper.isAudioArchivedSearchable(this));
+        switchAudioArchivedSearch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            Helper.setAudioArchivedSearchable(this, isChecked);
+            Toast.makeText(this, isChecked
+                            ? "Archived tracks will appear in search"
+                            : "Archived tracks hidden from search",
                     Toast.LENGTH_SHORT).show();
         });
 

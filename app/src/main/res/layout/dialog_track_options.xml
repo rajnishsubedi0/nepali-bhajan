@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -97,6 +97,18 @@
         android:textStyle="bold" />
 
     <TextView
+        android:id="@+id/sheet_archive"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_pill"
+        android:gravity="center"
+        android:text="Archive"
+        android:textColor="@color/text_primary"
+        android:textSize="15sp"
+        android:textStyle="bold" />
+
+    <TextView
         android:id="@+id/sheet_playlist"
         android:layout_width="match_parent"
         android:layout_height="50dp"
@@ -121,6 +133,19 @@
         android:textStyle="bold" />
 
     <TextView
+        android:id="@+id/sheet_remove_recent"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_pill"
+        android:gravity="center"
+        android:text="Remove from Recent"
+        android:textColor="@color/red"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
+    <TextView
         android:id="@+id/sheet_remove_playlist"
         android:layout_width="match_parent"
         android:layout_height="50dp"
@@ -142,5 +167,4 @@
         android:text="Close"
         android:textColor="@color/text_secondary"
         android:textSize="14sp" />
-
 </LinearLayout>

@@ -1,3 +1,4 @@
+
 package com.rkant.bhajanapp.adapter;
 
 import android.content.Context;
@@ -17,16 +18,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * List of bhajan categories (Category tab, Favourite sub-categories,
- * Archive sub-categories). Same look as the audio playlist rows but
- * counts "bhajans" instead of "tracks" and can pin a built-in
- * "All ..." row that has no delete button.
- */
+
 public class BhajanCategoryAdapter extends RecyclerView.Adapter<BhajanCategoryAdapter.VH> {
 
-    /** Click callback value for the pinned "All ..." row. */
-    public static final String ALL_ITEM = "__all__";
+
+    public static final String ALL_ITEM = "all";
 
     public interface OnCategoryAction {
         void onCategoryClick(String name);
@@ -39,6 +35,8 @@ public class BhajanCategoryAdapter extends RecyclerView.Adapter<BhajanCategoryAd
     private Map<String, Integer> counts = new HashMap<>();
     private String allItemName = null;
     private int allItemCount = 0;
+    private String nounSingular = "bhajan";
+    private String nounPlural = "bhajans";
 
     public BhajanCategoryAdapter(Context ctx, OnCategoryAction listener) {
         this.ctx = ctx;
@@ -49,6 +47,12 @@ public class BhajanCategoryAdapter extends RecyclerView.Adapter<BhajanCategoryAd
     public void setAllItem(String name, int count) {
         this.allItemName = name;
         this.allItemCount = count;
+    }
+
+    /** Audio lists count "tracks" instead of "bhajans". */
+    public void setNoun(String singular, String plural) {
+        this.nounSingular = singular;
+        this.nounPlural = plural;
     }
 
     public void update(List<String> names, Map<String, Integer> counts) {
@@ -86,7 +90,7 @@ public class BhajanCategoryAdapter extends RecyclerView.Adapter<BhajanCategoryAd
     }
 
     private String countText(int count) {
-        return count + (count == 1 ? " bhajan" : " bhajans");
+        return count + (count == 1 ? " " + nounSingular : " " + nounPlural);
     }
 
     @Override
@@ -99,6 +103,7 @@ public class BhajanCategoryAdapter extends RecyclerView.Adapter<BhajanCategoryAd
         View row;
         TextView title, subtitle;
         ImageView delete;
+
         VH(View itemView) {
             super(itemView);
             row = itemView.findViewById(R.id.row);
