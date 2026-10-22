@@ -1,5 +1,6 @@
 
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/root_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -13,7 +14,7 @@
         android:background="@color/bg"
         android:orientation="vertical">
 
-        <!-- ─── COMPACT HEADER: Title slides out, Search slides in (same as Library) ─── -->
+        <!-- ─── COMPACT HEADER: Title slides out, Search slides in ─── -->
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="56dp"
@@ -22,7 +23,6 @@
             android:paddingStart="20dp"
             android:paddingEnd="12dp">
 
-            <!-- Title group (slides left when search opens) -->
             <LinearLayout
                 android:id="@+id/audio_title_group"
                 android:layout_width="wrap_content"
@@ -38,7 +38,6 @@
                     android:textSize="24sp"
                     android:textStyle="bold" />
 
-                <!-- Active view indicator (All / Favourites / Downloads / Recent / Playlists / Archived) -->
                 <TextView
                     android:id="@+id/tv_audio_active_view"
                     android:layout_width="wrap_content"
@@ -55,7 +54,6 @@
                     android:textStyle="bold" />
             </LinearLayout>
 
-            <!-- Search bar (slides in from right, hidden initially) -->
             <LinearLayout
                 android:id="@+id/audio_search_inline"
                 android:layout_width="match_parent"
@@ -91,11 +89,10 @@
                     android:contentDescription="Clear search"
                     android:padding="8dp"
                     android:src="@drawable/ic_close"
-                    android:tint="@color/text_secondary"
-                    android:visibility="gone" />
+                    android:visibility="gone"
+                    app:tint="@color/text_secondary" />
             </LinearLayout>
 
-            <!-- Right side icons -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
@@ -111,7 +108,7 @@
                     android:contentDescription="Search"
                     android:padding="10dp"
                     android:src="@drawable/ic_search"
-                    android:tint="@color/text_primary" />
+                    app:tint="@color/text_primary" />
 
                 <ImageView
                     android:id="@+id/btn_audio_overflow"
@@ -121,11 +118,11 @@
                     android:contentDescription="More options"
                     android:padding="10dp"
                     android:src="@drawable/ic_more_vert"
-                    android:tint="@color/text_primary" />
+                    app:tint="@color/text_primary" />
             </LinearLayout>
         </FrameLayout>
 
-        <!-- Filter chips (labelled, scrollable) -->
+        <!-- Filter chips -->
         <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -246,66 +243,10 @@
                 android:paddingBottom="104dp" />
         </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
-        <!-- Bottom info bar (Recent / Playlists / Downloads / list views) -->
-        <LinearLayout
-            android:id="@+id/bottom_bar"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:background="@color/card"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:visibility="gone">
-
-            <TextView
-                android:id="@+id/tv_audio_count"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="0 tracks"
-                android:textColor="@color/text_primary"
-                android:textSize="15sp"
-                android:textStyle="bold" />
-
-            <View
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
-
-            <TextView
-                android:id="@+id/btn_new_playlist"
-                android:layout_width="wrap_content"
-                android:layout_height="38dp"
-                android:layout_marginEnd="8dp"
-                android:background="@drawable/bg_pill"
-                android:gravity="center"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:text="New Playlist"
-                android:textColor="@color/accent"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:visibility="gone" />
-
-            <TextView
-                android:id="@+id/btn_clear_recent"
-                android:layout_width="wrap_content"
-                android:layout_height="38dp"
-                android:background="@drawable/bg_pill"
-                android:gravity="center"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:text="Clear Recent"
-                android:textColor="@color/red"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:visibility="gone" />
-        </LinearLayout>
-
         <include layout="@layout/view_bottom_nav" />
     </LinearLayout>
 
-    <!-- ─── FLOATING ADD BUTTON (new playlist / favourite collection / archive collection) ─── -->
+    <!-- FAB -->
     <ImageView
         android:id="@+id/fab_audio_add"
         android:layout_width="56dp"
@@ -371,7 +312,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:padding="10dp"
             android:src="@drawable/ic_skip_previous"
-            android:tint="@color/text_primary" />
+            app:tint="@color/text_primary" />
 
         <ImageView
             android:id="@+id/mini_play"
@@ -382,7 +323,7 @@
             android:background="@drawable/bg_circle_accent"
             android:padding="11dp"
             android:src="@drawable/ic_play_arrow"
-            android:tint="@color/on_gradient" />
+            app:tint="@color/on_gradient" />
 
         <ImageView
             android:id="@+id/mini_next"
@@ -391,7 +332,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:padding="10dp"
             android:src="@drawable/ic_skip_next"
-            android:tint="@color/text_primary" />
+            app:tint="@color/text_primary" />
 
         <ImageView
             android:id="@+id/mini_stop"
@@ -401,7 +342,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:padding="10dp"
             android:src="@drawable/ic_close"
-            android:tint="@color/text_secondary" />
+            app:tint="@color/text_secondary" />
     </LinearLayout>
 
     <!-- Blur dim layer for the player sheet -->

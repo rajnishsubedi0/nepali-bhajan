@@ -68,7 +68,6 @@ public class AudioListActivity extends AppCompatActivity
         implements AudioAdapter.OnTrackAction, PlaylistAdapter.OnPlaylistAction, SheetBus.Listener {
 
     private static final int REQ_NOTIFICATION = 1001;
-
     private static final int FILTER_ALL = 0;
     private static final int FILTER_FAV = 1;
     private static final int FILTER_DOWNLOADS = 2;
@@ -76,7 +75,6 @@ public class AudioListActivity extends AppCompatActivity
     private static final int FILTER_PLAYLISTS = 4;
     private static final int FILTER_ARCHIVE = 5;
 
-    // Increased threshold so mini player doesn't dismiss too easily
     private static final float MINI_PLAYER_SWIPE_THRESHOLD = 350f;
     private static final float MINI_PLAYER_SWIPE_ALPHA_RANGE = 600f;
 
@@ -91,7 +89,6 @@ public class AudioListActivity extends AppCompatActivity
     private int currentFilter = FILTER_ALL;
     private String selectedPlaylist = null;
 
-    // Favourite / Archive collection navigation (same logic as Library)
     private boolean showSubCollectionList = false;
     private String selectedSubCollection = null;
 
@@ -101,8 +98,6 @@ public class AudioListActivity extends AppCompatActivity
     private TextView filterAll, filterFav, filterDownload, filterRecent, filterPlaylist, filterArchive;
     private String audioQuery = "";
 
-    private View bottomBar, btnClearRecent, btnNewPlaylist;
-    private TextView tvAudioCount;
     private TextView tvAudioActiveView;
     private View fabAdd;
 
@@ -118,7 +113,6 @@ public class AudioListActivity extends AppCompatActivity
     private float downX = 0;
     private boolean isSwiping = false;
 
-    // Header search toggle (same behaviour as Library)
     private View audioTitleGroup, audioSearchInline;
     private EditText etAudioSearch;
     private boolean searchOpen = false;
@@ -186,7 +180,6 @@ public class AudioListActivity extends AppCompatActivity
         audioAdapter = new AudioAdapter(displayedTracks, this, this);
         playlistAdapter = new PlaylistAdapter(this, this);
 
-        // Favourite / Archive collection list (same adapter the Library uses, counting tracks)
         audioCategoryAdapter = new BhajanCategoryAdapter(this, new BhajanCategoryAdapter.OnCategoryAction() {
             @Override
             public void onCategoryClick(String name) {
@@ -218,11 +211,7 @@ public class AudioListActivity extends AppCompatActivity
         contentView = findViewById(R.id.audio_content);
         dimOverlay = findViewById(R.id.dim_overlay);
 
-        bottomBar = findViewById(R.id.bottom_bar);
-        tvAudioCount = findViewById(R.id.tv_audio_count);
         tvAudioActiveView = findViewById(R.id.tv_audio_active_view);
-        btnClearRecent = findViewById(R.id.btn_clear_recent);
-        btnNewPlaylist = findViewById(R.id.btn_new_playlist);
         fabAdd = findViewById(R.id.fab_audio_add);
 
         filterAll = findViewById(R.id.filter_all);
@@ -239,7 +228,6 @@ public class AudioListActivity extends AppCompatActivity
         filterPlaylist.setOnClickListener(v -> setFilter(FILTER_PLAYLISTS));
         filterArchive.setOnClickListener(v -> setFilter(FILTER_ARCHIVE));
 
-        // ── Header search (same animated inline search as Library) ──
         audioTitleGroup = findViewById(R.id.audio_title_group);
         audioSearchInline = findViewById(R.id.audio_search_inline);
         etAudioSearch = findViewById(R.id.et_audio_search);
@@ -272,20 +260,10 @@ public class AudioListActivity extends AppCompatActivity
             hideKeyboard();
         });
 
-        btnClearRecent.setOnClickListener(v -> Helper.showConfirm(
-                this, "Clear Recent", "Remove all recently played audio from the Recent list?",
-                "Clear", true, () -> {
-                    Helper.clearAudioRecents(this);
-                    refreshDisplayedList();
-                    Toast.makeText(this, "Recent cleared", Toast.LENGTH_SHORT).show();
-                }
-        ));
-        btnNewPlaylist.setOnClickListener(v -> showCreatePlaylistDialog(null));
-
         setupMiniPlayer();
         setupNetworkMonitor();
         updateFilterIcons();
-        updateBottomBar();
+        updateFabVisibility();
         loadAudios(false);
 
         IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
@@ -296,7 +274,6 @@ public class AudioListActivity extends AppCompatActivity
         currentFilter = filter;
         selectedPlaylist = null;
         selectedSubCollection = null;
-        // Favourites / Archived open on their collection list first (same as Library)
         showSubCollectionList = (filter == FILTER_FAV || filter == FILTER_ARCHIVE);
         updateFilterIcons();
         refreshDisplayedList();
@@ -321,7 +298,7 @@ public class AudioListActivity extends AppCompatActivity
     }
 
     // ═══════════════════════════════════════════════════════════
-    // SEARCH TOGGLE (same logic as Library)
+    // SEARCH TOGGLE
     // ═══════════════════════════════════════════════════════════
 
     private void toggleSearch() {
@@ -460,23 +437,20 @@ public class AudioListActivity extends AppCompatActivity
     }
 
     // ═══════════════════════════════════════════════════════════
-    // REFRESH (views, collections, filters, search)
+    // REFRESH
     // ═══════════════════════════════════════════════════════════
 
     private void refreshDisplayedList() {
         updateActiveViewLabel();
         updateFabVisibility();
 
-        // ── Collection list layers ──
         if (currentFilter == FILTER_PLAYLISTS && selectedPlaylist == null) {
             if (recyclerView.getAdapter() != playlistAdapter) recyclerView.setAdapter(playlistAdapter);
             refreshPlaylists();
-            updateBottomBar();
             return;
         }
         if ((currentFilter == FILTER_FAV || currentFilter == FILTER_ARCHIVE) && showSubCollectionList) {
             showAudioCollectionList(currentFilter == FILTER_FAV);
-            updateBottomBar();
             return;
         }
 
@@ -488,7 +462,6 @@ public class AudioListActivity extends AppCompatActivity
                 || (searching && Helper.isAudioArchivedSearchable(this));
         int recentLimit = Helper.getAudioRecentLimit(this);
 
-        // ── Build base list by view ──
         if (currentFilter == FILTER_ARCHIVE) {
             if (selectedSubCollection == null) {
                 for (AudioTrack t : allTracks) if (Helper.isAudioArchived(this, t.id)) displayedTracks.add(t);
@@ -536,7 +509,6 @@ public class AudioListActivity extends AppCompatActivity
             displayedTracks.addAll(allTracks);
         }
 
-        // Archived tracks are hidden from the All view unless allowed (same rule as Library)
         if (currentFilter == FILTER_ALL && !includeArchived) {
             java.util.Iterator<AudioTrack> it = displayedTracks.iterator();
             while (it.hasNext()) {
@@ -545,7 +517,6 @@ public class AudioListActivity extends AppCompatActivity
             }
         }
 
-        // Search filter
         if (searching) {
             java.util.Iterator<AudioTrack> it = displayedTracks.iterator();
             while (it.hasNext()) {
@@ -555,10 +526,8 @@ public class AudioListActivity extends AppCompatActivity
         }
 
         audioAdapter.notifyDataSetChanged();
-        updateBottomBar();
     }
 
-    /** Favourite / Archive collection list ("All Favourites" / "All Archived" pinned row). */
     private void showAudioCollectionList(boolean fav) {
         if (recyclerView.getAdapter() != audioCategoryAdapter) recyclerView.setAdapter(audioCategoryAdapter);
 
@@ -599,29 +568,6 @@ public class AudioListActivity extends AppCompatActivity
         playlistAdapter.update(names, counts);
     }
 
-    private void updateBottomBar() {
-        boolean recentView = currentFilter == FILTER_RECENT;
-        boolean playlistView = currentFilter == FILTER_PLAYLISTS && selectedPlaylist == null;
-        boolean downloadView = currentFilter == FILTER_DOWNLOADS;
-        boolean favTrackView = currentFilter == FILTER_FAV && !showSubCollectionList;
-        boolean archiveTrackView = currentFilter == FILTER_ARCHIVE && !showSubCollectionList;
-        boolean show = recentView || playlistView || downloadView || favTrackView || archiveTrackView;
-
-        bottomBar.setVisibility(show ? View.VISIBLE : View.GONE);
-        if (show) {
-            if (playlistView) {
-                int count = Helper.getPlaylists(this).size();
-                tvAudioCount.setText(count + (count == 1 ? " playlist" : " playlists"));
-            } else {
-                tvAudioCount.setText(displayedTracks.size() + (displayedTracks.size() == 1 ? " track" : " tracks"));
-            }
-        }
-        btnClearRecent.setVisibility(recentView ? View.VISIBLE : View.GONE);
-        btnNewPlaylist.setVisibility(playlistView ? View.VISIBLE : View.GONE);
-        updateMiniMargin();
-        updateFabMargin(show);
-    }
-
     private void updateActiveViewLabel() {
         String label;
         if (currentFilter == FILTER_FAV) label = "Favourites";
@@ -635,7 +581,7 @@ public class AudioListActivity extends AppCompatActivity
     }
 
     // ═══════════════════════════════════════════════════════════
-    // FAB (new playlist / favourite collection / archive collection)
+    // FAB
     // ═══════════════════════════════════════════════════════════
 
     private void updateFabVisibility() {
@@ -645,14 +591,6 @@ public class AudioListActivity extends AppCompatActivity
         fabAdd.setVisibility(show ? View.VISIBLE : View.GONE);
     }
 
-    private void updateFabMargin(boolean barVisible) {
-        if (fabAdd == null) return;
-        float density = getResources().getDisplayMetrics().density;
-        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) fabAdd.getLayoutParams();
-        lp.bottomMargin = (int) (((barVisible ? 80 + 56 : 80) + 16) * density);
-        fabAdd.setLayoutParams(lp);
-    }
-
     private void handleFabClick() {
         if (currentFilter == FILTER_FAV) showCreateAudioCollectionDialog(null, true);
         else if (currentFilter == FILTER_ARCHIVE) showCreateAudioCollectionDialog(null, false);
@@ -660,7 +598,7 @@ public class AudioListActivity extends AppCompatActivity
     }
 
     // ═══════════════════════════════════════════════════════════
-    // OVERFLOW MENU (same structure as the Library overflow)
+    // OVERFLOW MENU
     // ═══════════════════════════════════════════════════════════
 
     private void showOverflowMenu() {
@@ -823,10 +761,9 @@ public class AudioListActivity extends AppCompatActivity
     }
 
     private void updateMiniMargin() {
-        if (miniPlayer == null || bottomBar == null) return;
+        if (miniPlayer == null) return;
         float density = getResources().getDisplayMetrics().density;
-        boolean barVisible = bottomBar.getVisibility() == View.VISIBLE;
-        int bottomMargin = (int) ((barVisible ? 80 + 56 : 80) * density);
+        int bottomMargin = (int) (80 * density);
         int sideMargin = (int) (14 * density);
         FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) miniPlayer.getLayoutParams();
         lp.bottomMargin = bottomMargin;
@@ -841,7 +778,7 @@ public class AudioListActivity extends AppCompatActivity
     }
 
     // ═══════════════════════════════════════════════════════════
-    // TRACK OPTIONS (long press) — same shape as Library options
+    // TRACK OPTIONS
     // ═══════════════════════════════════════════════════════════
 
     private void showTrackOptions(AudioTrack track) {
@@ -890,7 +827,6 @@ public class AudioListActivity extends AppCompatActivity
             }
         });
 
-        // ── Favourites: Add = pick collection, Remove = confirmation ──
         if (track.isFavourite) {
             sheetFav.setText("Remove from Favourites");
             sheetFav.setTextColor(getColor(R.color.accent));
@@ -904,7 +840,6 @@ public class AudioListActivity extends AppCompatActivity
             else showAddToAudioFavCollectionDialog(track);
         });
 
-        // ── Archive / Unarchive ──
         boolean archived = Helper.isAudioArchived(this, track.id);
         if (archived) {
             sheetArchive.setText("Unarchive");
@@ -938,7 +873,6 @@ public class AudioListActivity extends AppCompatActivity
         }
         sheetDownload.setOnClickListener(x -> { dialog.dismiss(); handleDownloadAction(track); });
 
-        // ── Remove from Recent (same as Library) ──
         if (Helper.getAudioRecentIds(this).contains(track.id)) {
             sheetRemoveRecent.setVisibility(View.VISIBLE);
             sheetRemoveRecent.setOnClickListener(x -> {
@@ -965,12 +899,10 @@ public class AudioListActivity extends AppCompatActivity
         dialog.show();
     }
 
-    /** Slides a row away with the RecyclerView removal animation when it leaves the current view. */
     private void removeTrackAnimated(AudioTrack track) {
         int pos = audioAdapter.positionOf(track);
         if (pos >= 0) {
             audioAdapter.removeItemAt(pos);
-            updateBottomBar();
         } else {
             refreshDisplayedList();
         }
@@ -1015,7 +947,7 @@ public class AudioListActivity extends AppCompatActivity
     }
 
     // ═══════════════════════════════════════════════════════════
-    // PLAYLIST + COLLECTION DIALOGS
+    // DIALOGS
     // ═══════════════════════════════════════════════════════════
 
     private void showCreatePlaylistDialog(AudioTrack trackToAdd) {
@@ -1038,7 +970,6 @@ public class AudioListActivity extends AppCompatActivity
                         Toast.makeText(this, "Playlist created", Toast.LENGTH_SHORT).show();
                     }
                     if (currentFilter == FILTER_PLAYLISTS && selectedPlaylist == null) refreshPlaylists();
-                    updateBottomBar();
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
@@ -1062,7 +993,6 @@ public class AudioListActivity extends AppCompatActivity
                 .show();
     }
 
-    /** Create a favourite (fav == true) or archive (fav == false) collection. */
     private void showCreateAudioCollectionDialog(AudioTrack trackToAdd, boolean fav) {
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_category_name, null);
         EditText etName = view.findViewById(R.id.et_category_name);
@@ -1166,7 +1096,6 @@ public class AudioListActivity extends AppCompatActivity
         Helper.showConfirm(this, "Delete Playlist", "Delete playlist \"" + name + "\"?", "Delete", true, () -> {
             Helper.deletePlaylist(this, name);
             refreshPlaylists();
-            updateBottomBar();
             Toast.makeText(this, "Playlist deleted", Toast.LENGTH_SHORT).show();
         });
     }
