@@ -77,7 +77,7 @@ public class AudioListActivity extends AppCompatActivity
     private static final int FILTER_PLAYLISTS = 4;
     private static final int FILTER_ARCHIVE = 5;
 
-    private static final float MINI_PLAYER_SWIPE_THRESHOLD = 350f;
+    private static final float MINI_PLAYER_SWIPE_THRESHOLD = 450f;
     private static final float MINI_PLAYER_SWIPE_ALPHA_RANGE = 600f;
 
     private RecyclerView recyclerView;
