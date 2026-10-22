@@ -292,12 +292,12 @@ public class LibraryActivity extends AppCompatActivity {
         }
         if (in.hasExtra(EXTRA_TAB)) {
             int requestedTab = in.getIntExtra(EXTRA_TAB, TAB_ALL);
-            if (requestedTab == 1) tab = TAB_ALL;
-            else if (requestedTab == 2) tab = TAB_FAV;
-            else if (requestedTab == 3) { tab = TAB_ALL; showingArchived = true; }
-            else if (requestedTab == 4) tab = TAB_COLLECTIONS;
-            else tab = TAB_ALL;
 
+            showingArchived = false;
+            if (requestedTab == TAB_FAV) tab = TAB_FAV;
+            else if (requestedTab == TAB_COLLECTIONS) tab = TAB_COLLECTIONS;
+            else if (requestedTab == TAB_RECENT) tab = TAB_RECENT;
+            else tab = TAB_ALL;
             selectedCollection = null;
             selectedSubCollection = null;
             showSubCollectionList = (tab == TAB_FAV || showingArchived);
