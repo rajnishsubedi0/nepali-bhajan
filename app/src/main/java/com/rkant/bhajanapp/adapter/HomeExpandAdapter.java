@@ -19,7 +19,7 @@ import java.util.List;
 
 /**
  * Vertical bhajan rows for the expanded Home sections.
- * Swipe left/right reveals a "Remove" action; tapping it slides the card
+ * Swipe RIGHT reveals a "Remove" action; tapping it slides the card
  * away and removes the row with a smooth RecyclerView animation.
  */
 public class HomeExpandAdapter extends RecyclerView.Adapter<HomeExpandAdapter.VH> {
@@ -88,9 +88,11 @@ public class HomeExpandAdapter extends RecyclerView.Adapter<HomeExpandAdapter.VH
 
     private void setupSwipe(VH h, Bhajan b) {
         final float density = ctx.getResources().getDisplayMetrics().density;
-        final float revealWidth = 90 * density;
-        final float threshold = 150 * density;
-        final float startSlop = 26 * density;
+        // ── RAISED THRESHOLDS (same as the library archive swipe) ──
+        final float revealWidth = 130 * density;  // hold-open distance (was 90dp)
+        final float threshold   = 150 * density;  // distance needed to trigger (was 150dp)
+        final float startSlop   = 10 * density;   // distance before swipe starts (was 26dp)
+
         final float[] startX = {0};
         final boolean[] swiping = {false};
 
@@ -100,28 +102,32 @@ public class HomeExpandAdapter extends RecyclerView.Adapter<HomeExpandAdapter.VH
                     startX[0] = event.getRawX();
                     swiping[0] = false;
                     return false;
+
                 case MotionEvent.ACTION_MOVE:
                     float dx = event.getRawX() - startX[0];
-                    if (!swiping[0] && Math.abs(dx) > startSlop) {
+
+                    // ── RIGHT SWIPE ONLY ──
+                    if (!swiping[0] && dx > startSlop) {
                         swiping[0] = true;
                         v.setPressed(false);
                         v.getParent().requestDisallowInterceptTouchEvent(true);
                     }
+
                     if (swiping[0]) {
-                        float shift = Math.max(-revealWidth, Math.min(revealWidth, dx));
+                        float shift = Math.max(0f, Math.min(revealWidth, dx));
                         h.cardContainer.setTranslationX(shift);
-                        if (Math.abs(shift) > 24 * density) h.reveal.setVisibility(View.VISIBLE);
+                        if (shift > 24 * density) h.reveal.setVisibility(View.VISIBLE);
                         return true;
                     }
                     return false;
+
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
                     v.getParent().requestDisallowInterceptTouchEvent(false);
                     if (swiping[0]) {
                         float upDx = event.getRawX() - startX[0];
-                        if (Math.abs(upDx) > threshold) {
-                            float holdX = upDx > 0 ? revealWidth : -revealWidth;
-                            h.cardContainer.animate().translationX(holdX).setDuration(120).start();
+                        if (upDx > threshold) {
+                            h.cardContainer.animate().translationX(revealWidth).setDuration(120).start();
                             h.reveal.setVisibility(View.VISIBLE);
                             h.reveal.setOnClickListener(rv -> animateRemoval(h, b));
                         } else {
@@ -138,11 +144,12 @@ public class HomeExpandAdapter extends RecyclerView.Adapter<HomeExpandAdapter.VH
         });
     }
 
-    /** Slides the card off-screen, then removes the row with animation. */
+    /** Slides the card off-screen (to the right), then removes the row with animation. */
     private void animateRemoval(VH h, Bhajan b) {
         final int position = h.getAdapterPosition();
         if (position == RecyclerView.NO_POSITION) return;
-        float direction = h.cardContainer.getTranslationX() >= 0 ? 1f : -1f;
+
+        float direction = 1f; // right swipe only
         h.reveal.setVisibility(View.GONE);
         h.cardContainer.animate()
                 .translationX(direction * h.cardContainer.getWidth())

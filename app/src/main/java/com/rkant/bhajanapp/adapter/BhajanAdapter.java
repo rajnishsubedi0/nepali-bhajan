@@ -135,9 +135,11 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
 
     private void setupSwipe(VH h, Bhajan b) {
         final float density = ctx.getResources().getDisplayMetrics().density;
-        final float revealWidth = 90 * density;
-        final float threshold = 150 * density;
-        final float startSlop = 26 * density;
+        // ── RAISED THRESHOLDS ──────────────────────────────────────────────
+        final float revealWidth = 130 * density;  // hold-open distance (was 90dp)
+        final float threshold   = 150 * density;  // distance needed to archive (was 150dp)
+        final float startSlop   = 10 * density;   // distance before swipe starts (was 26dp)
+
         final float[] startX = {0};
         final float[] startY = {0};
         final boolean[] swiping = {false};
@@ -154,8 +156,8 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
                 }
             }
         };
-
         h.row.setTag(longPress);
+
         h.row.setOnTouchListener((v, event) -> {
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
@@ -166,31 +168,38 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
                     swipeHandler.removeCallbacks(longPress);
                     swipeHandler.postDelayed(longPress, ViewConfiguration.getLongPressTimeout());
                     return false;
+
                 case MotionEvent.ACTION_MOVE:
                     float dx = event.getRawX() - startX[0];
                     float dy = event.getRawY() - startY[0];
-                    if (!swiping[0] && Math.abs(dx) > startSlop && Math.abs(dx) > Math.abs(dy) * 2.2f) {
+
+                    // ── RIGHT SWIPE ONLY: swipe starts only on a clear move to the right ──
+                    if (!swiping[0] && dx > startSlop && dx > Math.abs(dy) * 2.2f) {
                         swiping[0] = true;
                         swipeHandler.removeCallbacks(longPress);
                         v.setPressed(false);
                         v.getParent().requestDisallowInterceptTouchEvent(true);
                     }
+
                     if (swiping[0]) {
-                        float shift = Math.max(-revealWidth, Math.min(revealWidth, dx));
+                        // Card can only move to the right (0 = closed)
+                        float shift = Math.max(0f, Math.min(revealWidth, dx));
                         h.cardContainer.setTranslationX(shift);
-                        if (Math.abs(shift) > 24 * density) h.archiveReveal.setVisibility(View.VISIBLE);
+                        if (shift > 24 * density) h.archiveReveal.setVisibility(View.VISIBLE);
                         return true;
                     }
                     return false;
+
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
                     swipeHandler.removeCallbacks(longPress);
                     v.getParent().requestDisallowInterceptTouchEvent(false);
+
                     if (swiping[0]) {
                         float upDx = event.getRawX() - startX[0];
-                        if (Math.abs(upDx) > threshold) {
-                            float holdX = upDx > 0 ? revealWidth : -revealWidth;
-                            h.cardContainer.animate().translationX(holdX).setDuration(120).start();
+                        if (upDx > threshold) {
+                            // Passed the (higher) threshold → hold the card open on the right
+                            h.cardContainer.animate().translationX(revealWidth).setDuration(120).start();
                             h.archiveReveal.setVisibility(View.VISIBLE);
                             h.tvArchiveAction.setOnClickListener(av -> doArchive(b, h));
                             h.archiveReveal.setOnClickListener(av -> doArchive(b, h));
@@ -224,7 +233,8 @@ public class BhajanAdapter extends RecyclerView.Adapter<BhajanAdapter.VH> {
             return;
         }
 
-        float direction = h.cardContainer.getTranslationX() >= 0 ? 1f : -1f;
+        // Right swipe only → always exits to the right
+        float direction = 1f;
         h.archiveReveal.setVisibility(View.GONE);
         h.cardContainer.animate()
                 .translationX(direction * h.cardContainer.getWidth())

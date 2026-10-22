@@ -19,6 +19,8 @@ import android.animation.ValueAnimator;
 import android.view.ViewGroup;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -457,6 +459,7 @@ public class LibraryActivity extends AppCompatActivity {
 
         v.findViewById(R.id.btn_close).setOnClickListener(x -> dialog.dismiss());
         dialog.setContentView(v);
+        clearSheetBackground(dialog);
         dialog.show();
     }
 
@@ -845,6 +848,7 @@ public class LibraryActivity extends AppCompatActivity {
 
         sheetClose.setOnClickListener(x -> dialog.dismiss());
         dialog.setContentView(v);
+        clearSheetBackground(dialog);
         dialog.show();
     }
 
@@ -1095,5 +1099,13 @@ public class LibraryActivity extends AppCompatActivity {
             }
         });
         return anim;
+    }
+
+    private void clearSheetBackground(BottomSheetDialog dialog) {
+        View sheet = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+        if (sheet != null) sheet.setBackgroundColor(Color.TRANSPARENT);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
     }
 }

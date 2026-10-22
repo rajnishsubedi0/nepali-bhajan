@@ -112,6 +112,7 @@
                 android:layout_marginEnd="20dp"
                 android:layout_marginTop="22dp"
                 android:background="@drawable/bg_gradient_primary"
+                android:clipToOutline="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:visibility="gone">
 
@@ -206,6 +207,7 @@
                 android:layout_marginEnd="20dp"
                 android:layout_marginTop="14dp"
                 android:background="@drawable/bg_card"
+                android:clipToOutline="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
@@ -509,6 +511,7 @@
                 android:layout_marginEnd="20dp"
                 android:layout_marginTop="28dp"
                 android:background="@drawable/bg_card"
+                android:clipToOutline="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"

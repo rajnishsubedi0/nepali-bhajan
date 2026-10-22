@@ -3,6 +3,7 @@
     android:layout_height="wrap_content"
     android:layout_marginEnd="8dp"
     android:background="@drawable/bg_recent_strip"
+    android:clipToOutline="true"
     android:foreground="?attr/selectableItemBackground"
     android:orientation="vertical"
     android:padding="10dp">

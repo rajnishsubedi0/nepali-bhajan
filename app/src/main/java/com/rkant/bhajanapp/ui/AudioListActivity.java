@@ -33,6 +33,8 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -682,6 +684,7 @@ public class AudioListActivity extends AppCompatActivity
 
         v.findViewById(R.id.btn_close).setOnClickListener(x -> dialog.dismiss());
         dialog.setContentView(v);
+        clearSheetBackground(dialog);
         dialog.show();
     }
 
@@ -896,6 +899,7 @@ public class AudioListActivity extends AppCompatActivity
 
         sheetClose.setOnClickListener(x -> dialog.dismiss());
         dialog.setContentView(v);
+        clearSheetBackground(dialog);
         dialog.show();
     }
 
@@ -1221,5 +1225,12 @@ public class AudioListActivity extends AppCompatActivity
             return;
         }
         super.onBackPressed();
+    }
+        private void clearSheetBackground(BottomSheetDialog dialog) {
+        View sheet = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+        if (sheet != null) sheet.setBackgroundColor(Color.TRANSPARENT);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
     }
 }
